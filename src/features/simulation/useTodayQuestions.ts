@@ -3,7 +3,8 @@ import { useMemo } from 'react';
 
 import { policy } from '@/config/policy';
 import { CATEGORY_LABELS } from '@/constants/categories';
-import { useAnswers, useItems, useQuestions, useToday, reflectionDue, fallbackQuestion } from '@/data';
+import { useAnswers, useItems, useQuestions, useToday, reflectionDue } from '@/data';
+import { isSwipeQuestion } from '@/lib/reflection';
 import {
   categoryTendency,
   derivePhase,
@@ -34,6 +35,7 @@ export function useTodayQuestions() {
     const tendencies = categoryTendency({ items, questions, answers, policy });
     const entries: TodayEntry[] = [];
     const awaitingDecision: Item[] = [];
+    let dueCount = 0;
 
     // 먼저 등록한 물건부터 묻는다
     for (const item of [...items].reverse()) {
@@ -43,7 +45,8 @@ export function useTodayQuestions() {
       const itemQuestions = questions.filter((q) => q.itemId === item.id);
       const daily = itemQuestions.find(q => q.date === today && q.phase === (item.status === 'bought' ? 'post' : 'pre'));
       const answered = answers.some(a => a.itemId === item.id && a.date === today && (questions.find(q => q.id === a.questionId)?.phase ?? 'pre') === (item.status === 'bought' ? 'post':'pre'));
-      const question = answered ? null : daily ?? fallbackQuestion(item,today);
+      if (!answered) dueCount++;
+      const question = answered || !daily || !isSwipeQuestion(daily) ? null : daily;
       if (!question) continue;
 
       const t = tendencies.find((x) => x.category === item.category);
@@ -57,6 +60,6 @@ export function useTodayQuestions() {
         emphasis: t && t.samples >= policy.emphasis.minSamples && t.ratio >= policy.emphasis.overPredictionRatio ? {ratio:t.ratio} : null,
       });
     }
-    return { entries, awaitingDecision };
+    return { entries, awaitingDecision, dueCount };
   }, [items, questions, answers, today]);
 }

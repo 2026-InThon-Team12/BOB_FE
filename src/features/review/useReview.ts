@@ -1,19 +1,15 @@
-import { reflectionCopy } from '@/constants/copy';
 /** 구매 후 점검 (기능 2, 시안 "구매 후 점검") — 사용 구간을 고르면 예측과 비교 */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { policy } from '@/config/policy';
-import { submitReviewRemote, useItem, useToday } from '@/data';
+import { useItem, useToday } from '@/data';
 import { derivePhase, predictionVerdict, reviewDueDay, VERDICT_RATIO } from '@/lib/calc';
 import { dateKeyOf, diffDays } from '@/lib/date';
 
 export function useReview(itemId: string | undefined) {
   const item = useItem(itemId);
   const today = useToday();
-  const [saving,setSaving] = useState(false);
-  const [error,setError] = useState<string|null>(null);
-  const [picked, setPicked] = useState<string | null>(null);
-  const bucketId = picked ?? item?.review?.usageBucket ?? null;
+  const bucketId = item?.review?.usageBucket ?? null;
 
   const view = useMemo(() => {
     if (!item || !item.purchase) return null;
@@ -55,12 +51,6 @@ export function useReview(itemId: string | undefined) {
   return {
     view,
     bucketId,
-    saving,error,
-    /** 고르면 바로 저장 (다시 고르면 고친다) */
-    pick: async (id: string) => {
-      if (!item || saving) return; setSaving(true);setError(null);
-      try {await submitReviewRemote(item.id,id);setPicked(id);} catch {setError(reflectionCopy.reviewFailed);} finally {setSaving(false);}
-    },
     saved: !!item?.review,
   };
 }

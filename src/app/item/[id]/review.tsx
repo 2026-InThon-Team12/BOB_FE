@@ -1,22 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
 
-import { BarRow, BucketOption, ItemSummary } from '@/components/feature';
+import { BarRow, ItemSummary } from '@/components/feature';
 import { Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, TextLink } from '@/components/ui';
 import { CATEGORY_LABELS } from '@/constants/categories';
 import { copy, reflectionCopy } from '@/constants/copy';
 import { useReview } from '@/features/review/useReview';
 import { goBack } from '@/lib/navigation';
-import { makeStyles } from '@/theme';
 
-const useStyles = makeStyles((t) => ({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: t.space[2] },
-  cell: { width: '48.5%' },
-}));
-
-/** 구매 후 점검 (기능 2, 명세서 4.7) — 구간을 고르면 바로 저장하고 예측과 비교 */
+/** New purchase reflections use the daily swipe flow; old usage records remain readable. */
 export default function PostCheckScreen() {
-  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const review = useReview(id);
   const { view } = review;
@@ -31,7 +23,6 @@ export default function PostCheckScreen() {
   }
 
   const { item } = view;
-  const due = view.phase === 'awaitingReview' || view.phase === 'reviewed';
   const range = view.bucket ? copy.review.buckets[view.bucket.id]?.range : '';
 
   return (
@@ -46,37 +37,11 @@ export default function PostCheckScreen() {
 
       <Button label={reflectionCopy.postAction} variant="secondary" onPress={()=>router.push('/check')}/>
       {item.purchase?.reviewStart && <Text tone="secondary">{reflectionCopy.window(item.purchase.reviewStart,item.purchase.reviewEnd)}</Text>}
-      {review.error && <Text tone="warning">{review.error}</Text>}
-      {review.saving && <Text>{reflectionCopy.saving}</Text>}
-      {review.saved && !view.eligible && <Text>{reflectionCopy.reviewInsufficient}</Text>}
-      {!due ? (
-        <Card tone="subtle">
-          <Text variant="label" tone="secondary">
-            {copy.review.notDue(view.daysUntilDue)}
-          </Text>
-        </Card>
-      ) : (
+      <Text tone="secondary">{reflectionCopy.postSwipeNotice}</Text>
+      {review.saved && (
         <>
-          <Stack gap={2}>
-            <Text variant="title">{copy.review.question(item.name, view.window)}</Text>
-            <Text variant="label" tone="secondary">
-              {copy.review.body}
-            </Text>
-          </Stack>
-
-          <View style={styles.grid} accessibilityRole="radiogroup">
-            {view.buckets.map((b) => (
-              <View key={b.id} style={styles.cell}>
-                <BucketOption
-                  label={copy.review.buckets[b.id].label}
-                  range={copy.review.buckets[b.id].range}
-                  selected={review.bucketId === b.id}
-                  onPress={() => review.pick(b.id)}
-                />
-              </View>
-            ))}
-          </View>
-
+          <Text variant="label">{reflectionCopy.legacyReview}</Text>
+          <Text>{view.bucket ? copy.review.buckets[view.bucket.id]?.label : ''}</Text>
           {view.comparison && view.bucket && (
             <Card>
               <Stack gap={4}>

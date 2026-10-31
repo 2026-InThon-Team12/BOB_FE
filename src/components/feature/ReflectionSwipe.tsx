@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Animated } from 'react-native';
 import { Stack, Text } from '@/components/ui';
 import type { AnswerSpec, ReflectionAnswer } from '@/lib/reflection';
+import { swipeAnswer } from '@/lib/reflection';
 import { reflectionCopy } from '@/constants/copy';
 import { useTheme } from '@/theme';
 import { SwipeCard, type SwipeCardHandle, type SwipeDirection } from './SwipeCard';
@@ -17,7 +18,7 @@ export function ReflectionSwipe({children, spec, onAnswer}: {children: ReactNode
   const codes = ['YES','NO','UNSURE'] as const;
   const labels = codes.map(code => spec.options!.find(o => o.code === code)!.label) as [string,string,string];
   const directions: SwipeDirection[] = ['right','left','up'];
-  const answer = async (direction: SwipeDirection) => {const i = directions.indexOf(direction);setFailed(false);try {await onAnswer({choice_code:codes[i]}, labels[i]);} catch {setFailed(true);ref.current?.reset();}};
+  const answer = async (direction: SwipeDirection) => {const i = directions.indexOf(direction);setFailed(false);try {await onAnswer({choice_code:swipeAnswer(direction)}, labels[i]);} catch {setFailed(true);ref.current?.reset();}};
   return <Stack gap={4}>
     <SwipeCard ref={ref} position={position} onSwipe={answer} overlays={{
       right:{label:labels[0],icon:'check',color:theme.color.brand.solid},

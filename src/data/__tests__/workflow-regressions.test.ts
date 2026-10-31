@@ -1,4 +1,4 @@
-import { setMonthlyBudget, addItems, createGoal, decideItem, getToday, recordImpulse, removeImpulse, resetAllData, shiftClock, loadTodayReflections, saveReflection, summarizeItem, decideItemRemote, submitReviewRemote } from '@/data';
+import { setMonthlyBudget, addItems, createGoal, decideItem, getToday, recordImpulse, removeImpulse, resetAllData, shiftClock, loadTodayReflections, saveReflection, summarizeItem, decideItemRemote } from '@/data';
 import { getState, update } from '@/data/store';
 import { applyRemoteItem } from '@/data/actions/remoteItems';
 import { simulationDayNumber } from '@/lib/calc/itemMachine';
@@ -11,6 +11,7 @@ import { bobApi } from '@/api';
 import { mapCartScreenshot } from '@/ai/real/mappers';
 import { reflectionMetrics } from '@/data/actions/reflections';
 import { migrate } from '@/data/migrations';
+import { SWIPE_ANSWER_SPEC } from '@/constants/swipeQuestionCatalog';
 jest.mock('@/api',()=>({bobApi:{simulations:{localQuestion:jest.fn(),summarize:jest.fn()},purchases:{localQuestion:jest.fn(),putReview:jest.fn()},items:{putDecision:jest.fn()}}}));
 jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
 const input={name:'키보드',price:20000,category:'digital' as const,reasons:['need' as const],source:'manual' as const};
@@ -90,31 +91,35 @@ it('pending registrations are not notification work; dates and server IDs are ad
   applyRemoteItem(i.id,{id:'server',decision:null,purchase:null,simulation:{id:'simulation',duration_days:0,start_date:today,end_date_exclusive:today,observation_dates:[]}});
   expect(getState().items[i.id]).toMatchObject({remoteId:'server',simulationId:'simulation',registrationState:'complete',simulation:{durationDays:0}});
 });
-it('daily AI questions are frozen locally, response bodies leave the device only for the summary, and BUY/review reuse server IDs',async()=>{
+it('daily AI questions are frozen locally, response bodies leave the device only for the summary, and BUY/post swipes reuse server IDs',async()=>{
   const [i]=addItems([input]);const start=getToday();
   const server={id:'server',decision:null as string|null,purchase:null as unknown,simulation:{id:'simulation',duration_days:3,start_date:start,end_date_exclusive:addDays(start,3),observation_dates:[start,addDays(start,1),addDays(start,2)]}};
   applyRemoteItem(i.id,server);
   const question=bobApi.simulations.localQuestion as jest.Mock;
   for(let day=0;day<3;day++) {
-    const today=getToday();const forecast=day===2;
-    question.mockResolvedValueOnce({id:`q${day}`,question_date:today,template_code:forecast?'EXPECTED_USE_DAYS':'RECENT_NEED',question:'질문',answer_spec:forecast?{type:'INTEGER',minimum:0,maximum:30,options:[{code:'UNSURE',label:'모름'}]}:{type:'CHOICE',options:[{code:'YES',label:'네'},{code:'NO',label:'아니요'}]},generation_method:'AI'});
+    const today=getToday();const code=['YES','UNSURE','NO'][day];
+    question.mockResolvedValueOnce({id:`q${day}`,question_date:today,template_code:'SW_PRE_NEED',template_version:'swipe-v2',question:'키보드가 없어서 최근 타이핑에 불편을 느낀 적이 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
     await loadTodayReflections();await loadTodayReflections();
-    saveReflection(`q${day}`,forecast?{number_value:10}:{choice_code:'YES'},forecast?'10일':'네');
-    expect(reflectionMetrics(getState().items[i.id]).expected).toBe(forecast?10:null);
+    await saveReflection(`q${day}`,{choice_code:code},code);
+    expect(reflectionMetrics(getState().items[i.id]).expected).toBeNull();
     shiftClock(1);
   }
   expect(question).toHaveBeenCalledTimes(3);expect(JSON.stringify(question.mock.calls)).not.toContain('choice_code');
-  (bobApi.simulations.summarize as jest.Mock).mockResolvedValue({result:{expected_used_days:10,answer_coverage:1,comparison_eligible:true,comparison_reason:null},ai_summary:{summary:'10일 사용할 계획이에요.',method:'AI'}});
+  (bobApi.simulations.summarize as jest.Mock).mockResolvedValue({result:{expected_used_days:null,answer_coverage:2/3,comparison_eligible:false,comparison_reason:'REFLECTION_NOT_USAGE'},ai_summary:{summary:'긍정·모름·부정 응답이 하나씩 있어요.',method:'AI'}});
   await summarizeItem(i.id);await summarizeItem(i.id);
-  expect(bobApi.simulations.summarize).toHaveBeenCalledTimes(1);expect(getState().items[i.id].summary?.expectedDays).toBe(10);
+  expect(bobApi.simulations.summarize).toHaveBeenCalledTimes(1);expect(getState().items[i.id].summary).toMatchObject({expectedDays:null,eligible:false,reflectionCounts:{YES:1,UNSURE:1,NO:1}});
   (bobApi.items.putDecision as jest.Mock).mockResolvedValue({...server,decision:'BUY',purchase:{id:'purchase',purchased_on:getToday(),review_start:getToday(),review_end:addDays(getToday(),13)}});
   await decideItemRemote(i.id,'buy');expect(getState().items[i.id].purchaseId).toBe('purchase');
-  shiftClock(14);(bobApi.purchases.putReview as jest.Mock).mockResolvedValue({});
-  await submitReviewRemote(i.id,'sometimes');expect(bobApi.purchases.putReview).toHaveBeenCalledWith('purchase',{frequency:'SOMETIMES'});
+  (bobApi.purchases.localQuestion as jest.Mock).mockResolvedValue({id:'post-q',question_date:getToday(),template_code:'SW_POST_READY',template_version:'swipe-v2',question:'키보드를 계획했던 용도로 활용할 준비가 되어 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
+  await loadTodayReflections();
+  await saveReflection('post-q',{choice_code:'UNSURE'},'잘 모르겠어요');
+  expect(bobApi.purchases.localQuestion).toHaveBeenCalledWith('purchase',{recent_templates:[]});
+  expect(bobApi.purchases.putReview).not.toHaveBeenCalled();
 });
-it('no forecast, unsure or partial observation never qualify as usage evidence',()=>{
+it('historical answers remain readable and cannot be reinterpreted as new swipe answers',async()=>{
   const [i]=addItems([input]);const q={id:'q',itemId:i.id,date:getToday(),phase:'pre' as const,templateCode:'CURRENT_MOOD',text:'기분',kind:'thought_of' as const,variant:'normal' as const,options:[{id:'HAPPY',label:'좋음',countsAsUse:false},{id:'UNSURE',label:'모름',countsAsUse:false}],answerSpec:{type:'CHOICE',options:[{code:'HAPPY',label:'좋음'},{code:'UNSURE',label:'모름'}]}};
-  update(s=>({questions:{...s.questions,q}}));saveReflection('q',{choice_code:'HAPPY'},'좋음');
+  update(s=>({questions:{...s.questions,q},answers:{...s.answers,old:{id:'old',itemId:i.id,questionId:'q',date:getToday(),at:new Date().toISOString(),optionId:'HAPPY',value:{choice_code:'HAPPY'},label:'좋음'}}}));
+  await expect(saveReflection('q',{choice_code:'YES'},'예')).rejects.toThrow();
   expect(reflectionMetrics(i)).toMatchObject({expected:null,eligible:false});
 });
 it('legacy goals stop accumulating after replacement during migration',()=>{
@@ -134,12 +139,12 @@ it('hold preserves observation gaps and respects the sale deadline',()=>{
   expect(simulationDayNumber(held,addDays(getToday(),1))).toBe(4);
   shiftClock(3);expect(()=>decideItem(i.id,'hold')).toThrow('판매 마감일');
 });
-it('post-purchase daily completion suppresses reminders until an outstanding review is due',()=>{
+it('post-purchase daily completion suppresses reminders without a duplicate usage survey',()=>{
   const [i]=addItems([input]);const bought=decideItem(i.id,'buy');const day=getToday();
   const q={id:'post',itemId:i.id,phase:'post' as const,date:day,text:'질문',kind:'thought_of' as const,variant:'normal' as const,options:[]};
   const a={id:'answer',itemId:i.id,questionId:'post',date:day,at:new Date().toISOString(),optionId:'YES'};
   expect(hasNotificationWork([bought],[q],[],day)).toBe(true);
   expect(hasNotificationWork([bought],[q],[a],day)).toBe(false);
   const later=addDays(day,14);
-  expect(hasNotificationWork([bought],[q],[{...a,date:later}],later)).toBe(true);
+  expect(hasNotificationWork([bought],[q],[{...a,date:later}],later)).toBe(false);
 });

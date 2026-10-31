@@ -69,8 +69,13 @@ export default function ResultScreen() {
         {item.summary ? <>
           <Text>{item.summary.text}</Text>
           <Text tone="secondary">{item.summary.method === 'AI' ? reflectionCopy.aiSummary : reflectionCopy.fallbackSummary} · {reflectionCopy.coverage(item.summary.coverage)}</Text>
-          {item.summary.expectedDays !== null && <Text>{reflectionCopy.expected(item.summary.expectedDays)}</Text>}
-          {!item.summary.eligible && <Text tone="secondary">{reflectionCopy.insufficient}</Text>}
+          {item.summary.reflectionCounts ? <>
+            <Text>{reflectionCopy.reflectionCounts(item.summary.reflectionCounts.YES,item.summary.reflectionCounts.UNSURE,item.summary.reflectionCounts.NO)}</Text>
+            <Text tone="secondary">{reflectionCopy.reflectionNotice}</Text>
+          </> : <>
+            {item.summary.expectedDays !== null && <Text>{reflectionCopy.expected(item.summary.expectedDays)}</Text>}
+            {!item.summary.eligible && <Text tone="secondary">{reflectionCopy.insufficient}</Text>}
+          </>}
         </> : !summaryLoading && <Text>{reflectionCopy.unfinished}</Text>}
       </Stack></Card>
 
