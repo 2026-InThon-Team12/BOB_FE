@@ -7,7 +7,7 @@
  */
 import { ApiError } from './errors';
 import { request, type ImageUpload } from './http';
-import { clearGuestToken, getGuestToken, setGuestToken } from './session';
+import { getGuestToken, setGuestToken } from './session';
 
 /** 스펙 확정 전 요청 본문 */
 export type Body = unknown;
@@ -26,26 +26,26 @@ export function extractToken(data: unknown): string {
 }
 
 /** 저장된 게스트 토큰을 쓰고, 없으면 새로 발급받는다 */
+let sessionPending: Promise<string> | undefined;
 export async function ensureGuestSession(): Promise<string> {
-  const existing = await getGuestToken();
-  if (existing) return existing;
-  const token = extractToken(await request({ method: 'POST', path: '/guest-sessions' }));
-  await setGuestToken(token);
-  return token;
+  if (!sessionPending)
+    sessionPending = (async () => {
+      const existing = await getGuestToken();
+      if (existing) return existing;
+      const token = extractToken(await request({ method: 'POST', path: '/guest-sessions' }));
+      await setGuestToken(token);
+      return token;
+    })().finally(() => {
+      sessionPending = undefined;
+    });
+  return sessionPending;
 }
 
-/** 인증이 필요한 호출. 토큰이 만료돼 401이 오면 세션을 새로 받아 한 번만 다시 시도한다 */
-async function authed(opts: Omit<Parameters<typeof request>[0], 'token'>): Promise<unknown> {
-  try {
-    return await request({ ...opts, token: await ensureGuestSession() });
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 401) {
-      await clearGuestToken();
-      return request({ ...opts, token: await ensureGuestSession() });
-    }
-    throw e;
-  }
+/** APK와 동일하게 인증 실패 시 계정을 교체하지 않는다. */
+export async function authenticatedRequest(opts: Omit<Parameters<typeof request>[0], 'token'>): Promise<unknown> {
+  return request({ ...opts, token: await ensureGuestSession() });
 }
+const authed = authenticatedRequest;
 
 const seg = encodeURIComponent;
 
@@ -69,7 +69,12 @@ export const bobApi = {
     create: (body: Body) => authed({ method: 'POST', path: '/item-drafts', json: body }),
   },
   cartExtractions: {
-    create: (image: ImageUpload) => authed({ method: 'POST', path: '/cart-extractions', image: { upload: image } }),
+    create: (image: ImageUpload) =>
+      authed({
+        method: 'POST',
+        path: '/cart-extractions',
+        image: { upload: image },
+      }),
   },
   productUrlDrafts: {
     create: (url: string) => authed({ method: 'POST', path: '/product-url-drafts', json: { url } }),
@@ -78,27 +83,39 @@ export const bobApi = {
   // ── 품목 ─────────────────────────────────────────────
   items: {
     batchCreate: (body: Body, idempotencyKey: string) =>
-      authed({ method: 'POST', path: '/items/batch', json: body, headers: { 'Idempotency-Key': idempotencyKey } }),
+      authed({
+        method: 'POST',
+        path: '/items/batch',
+        json: body,
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }),
     list: () => authed({ method: 'GET', path: '/items' }),
     get: (id: string) => authed({ method: 'GET', path: `/items/${seg(id)}` }),
     patch: (id: string, body: Body) => authed({ method: 'PATCH', path: `/items/${seg(id)}`, json: body }),
     /** 구매 결정 */
-    putDecision: (id: string, body: Body) =>
-      authed({ method: 'PUT', path: `/items/${seg(id)}/decision`, json: body }),
+    putDecision: (id: string, body: Body) => authed({ method: 'PUT', path: `/items/${seg(id)}/decision`, json: body }),
   },
 
   // ── 시뮬레이션 ────────────────────────────────────────
   simulations: {
     /** @param date YYYY-MM-DD */
     putAnswers: (id: string, date: string, body: Body) =>
-      authed({ method: 'PUT', path: `/simulations/${seg(id)}/answers/${seg(date)}`, json: body }),
+      authed({
+        method: 'PUT',
+        path: `/simulations/${seg(id)}/answers/${seg(date)}`,
+        json: body,
+      }),
     getResult: (id: string) => authed({ method: 'GET', path: `/simulations/${seg(id)}/result` }),
   },
 
   // ── 구매 회고 ─────────────────────────────────────────
   purchases: {
     putReview: (id: string, body: Body) =>
-      authed({ method: 'PUT', path: `/purchases/${seg(id)}/review`, json: body }),
+      authed({
+        method: 'PUT',
+        path: `/purchases/${seg(id)}/review`,
+        json: body,
+      }),
   },
 
   // ── 예산·목표 ─────────────────────────────────────────
@@ -117,7 +134,11 @@ export const bobApi = {
   impulses: {
     create: (body: Body) => authed({ method: 'POST', path: '/impulses', json: body }),
     putDecision: (id: string, body: Body) =>
-      authed({ method: 'PUT', path: `/impulses/${seg(id)}/decision`, json: body }),
+      authed({
+        method: 'PUT',
+        path: `/impulses/${seg(id)}/decision`,
+        json: body,
+      }),
   },
 };
 

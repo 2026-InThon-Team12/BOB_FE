@@ -25,18 +25,16 @@ export function useScreenshotImport() {
     try {
       picked = await pickImage();
     } catch {
-      flow.setRows([]);
       setPickError(new Error(copy.register.imageUnreadable));
       return 'failed';
     }
     if (!picked) return 'canceled';
-    // 새 분석을 시작하면 이전 사진의 결과는 등록할 수 없도록 즉시 비운다.
-    flow.setRows([]);
+    // 기존 초안은 유지하고, 새 사진 분석에 성공한 항목만 추가한다.
     setImage(picked);
     try {
       const analysis = await mutation.mutateAsync(picked);
       if (analysis.items.length === 0) return 'failed';
-      flow.setRows(analysis.items.map(draftFromAi));
+      flow.appendRows(analysis.items.map(draftFromAi));
       return 'done';
     } catch {
       return 'failed';
@@ -69,10 +67,10 @@ export function useLinkImport() {
     setSubmitted(true);
     if (!isUrl(url)) return 'canceled';
     try {
-      flow.setRows([draftFromAi(await mutation.mutateAsync(url.trim()))]);
+      flow.appendRows([draftFromAi(await mutation.mutateAsync(url.trim()))]);
       return 'done';
     } catch {
-      flow.setRows([{ ...emptyDraft('link'), sourceUrl: url.trim() }]);
+      flow.appendRows([{ ...emptyDraft('link'), sourceUrl: url.trim() }]);
       return 'failed';
     }
   };
@@ -89,5 +87,5 @@ export function useLinkImport() {
 /** 직접 입력: 빈 초안 한 줄로 시작 */
 export function useStartManual() {
   const flow = useAddFlow();
-  return () => flow.setRows([emptyDraft('manual')]);
+  return () => flow.appendRows([emptyDraft('manual')]);
 }

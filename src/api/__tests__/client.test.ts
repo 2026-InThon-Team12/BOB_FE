@@ -47,19 +47,63 @@ describe('buildUrl', () => {
 });
 
 describe('게스트 세션', () => {
+  it('동시 첫 요청도 게스트 계정을 하나만 발급한다', async () => {
+    responses.push({ status: 201, body: { access_token: 'one-account' } });
+    expect(await Promise.all([ensureGuestSession(), ensureGuestSession(), ensureGuestSession()])).toEqual([
+      'one-account',
+      'one-account',
+      'one-account',
+    ]);
+    expect(calls).toHaveLength(1);
+  });
   it('사진 첫 업로드: 게스트 발급 → image multipart 인증 요청 → 실제 상품으로 변환', async () => {
     const append = jest.spyOn(FormData.prototype, 'append');
-    responses.push({ status: 201, body: { access_token: 'cart-token' } }, { status: 200, body: {
-      items: [{ name: '사진 속 키보드', price: 45000, category: 'DIGITAL', source: 'SCREENSHOT' }],
-      warnings: ['CONFIRM_EXTRACTED_ITEMS'], analysis_method: 'ocr',
-    } });
-    const result = await realAi.parseCartScreenshot({ uri: 'file:///prepared.png', name: 'cart.png', mimeType: 'image/png' });
-    expect(calls.map((c) => c.url)).toEqual(['https://api.test/api/v1/guest-sessions', 'https://api.test/api/v1/cart-extractions']);
+    responses.push(
+      { status: 201, body: { access_token: 'cart-token' } },
+      {
+        status: 200,
+        body: {
+          items: [
+            {
+              name: '사진 속 키보드',
+              price: 45000,
+              category: 'DIGITAL',
+              source: 'SCREENSHOT',
+            },
+          ],
+          warnings: ['CONFIRM_EXTRACTED_ITEMS'],
+          analysis_method: 'ocr',
+        },
+      },
+    );
+    const result = await realAi.parseCartScreenshot({
+      uri: 'file:///prepared.png',
+      name: 'cart.png',
+      mimeType: 'image/png',
+    });
+    expect(calls.map((c) => c.url)).toEqual([
+      'https://api.test/api/v1/guest-sessions',
+      'https://api.test/api/v1/cart-extractions',
+    ]);
     expect(header(calls[1], 'Authorization')).toBe('Bearer cart-token');
     expect(header(calls[1], 'Content-Type')).toBeUndefined();
-    expect(append).toHaveBeenCalledWith('image', expect.objectContaining({ uri: 'file:///prepared.png', bytes: expect.any(Function) }), 'cart.png');
+    expect(append).toHaveBeenCalledWith(
+      'image',
+      expect.objectContaining({
+        uri: 'file:///prepared.png',
+        bytes: expect.any(Function),
+      }),
+      'cart.png',
+    );
     append.mockRestore();
-    expect(result.items).toEqual([expect.objectContaining({ name: '사진 속 키보드', price: 45000, category: 'digital', source: 'screenshot' })]);
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        name: '사진 속 키보드',
+        price: 45000,
+        category: 'digital',
+        source: 'screenshot',
+      }),
+    ]);
   });
 
   it('토큰 필드 이름 후보', () => {
@@ -75,7 +119,10 @@ describe('게스트 세션', () => {
     resetSessionCache(); // 앱 재시작 흉내 → 저장소에서 다시 읽는다
     expect(await ensureGuestSession()).toBe('guest-1');
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({ url: 'https://api.test/api/v1/guest-sessions', init: { method: 'POST' } });
+    expect(calls[0]).toMatchObject({
+      url: 'https://api.test/api/v1/guest-sessions',
+      init: { method: 'POST' },
+    });
   });
 });
 
@@ -109,19 +156,28 @@ describe('엔드포인트', () => {
     expect(calls[3].init.body).toBeUndefined();
   });
 
-  it('401이면 세션을 새로 받아 한 번 다시 시도', async () => {
-    responses.push({ status: 401 }, { status: 201, body: { token: 'new' } }, { status: 200, body: { ok: 1 } });
-    await expect(bobApi.today.get()).resolves.toEqual({ ok: 1 });
-    expect(calls.map((c) => header(c, 'Authorization'))).toEqual(['Bearer tok', undefined, 'Bearer new']);
+  it('401이어도 기존 계정을 유지하고 오류를 반환한다', async () => {
+    responses.push({ status: 401 });
+    await expect(bobApi.today.get()).rejects.toMatchObject({ status: 401 });
+    expect(calls.map((c) => header(c, 'Authorization'))).toEqual(['Bearer tok']);
+    expect(await ensureGuestSession()).toBe('tok');
   });
 
   it('서버 오류는 ApiError(http, status, body)', async () => {
     responses.push({ status: 422, body: { message: 'bad' } });
-    await expect(bobApi.items.list()).rejects.toMatchObject({ code: 'http', status: 422, body: { message: 'bad' } });
+    await expect(bobApi.items.list()).rejects.toMatchObject({
+      code: 'http',
+      status: 422,
+      body: { message: 'bad' },
+    });
   });
 
   it('이미지는 multipart (Content-Type은 fetch가 정함)', async () => {
-    await bobApi.cartExtractions.create({ uri: 'file:///cart.png', name: 'cart.png', mimeType: 'image/png' });
+    await bobApi.cartExtractions.create({
+      uri: 'file:///cart.png',
+      name: 'cart.png',
+      mimeType: 'image/png',
+    });
     expect(calls[0].url).toBe('https://api.test/api/v1/cart-extractions');
     expect(calls[0].init.body).toBeInstanceOf(FormData);
     expect(header(calls[0], 'Content-Type')).toBeUndefined();

@@ -1,18 +1,19 @@
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useState } from "react";
+import { Pressable, View } from "react-native";
 
-import { addMonths, daysInMonth } from '@/lib/date';
-import { makeStyles, useTheme } from '@/theme';
+import { addMonths, daysInMonth } from "@/lib/date";
+import { makeStyles, useTheme } from "@/theme";
 
-import { Icon } from './Icon';
-import { Row } from './Stack';
-import { Text } from './Text';
+import { Icon } from "./Icon";
+import { Row } from "./Stack";
+import { Text } from "./Text";
 
 type Props = {
   /** 선택한 날짜 YYYY-MM-DD */
   value?: string;
   /** 이 날짜 이전은 고를 수 없다 (오늘) */
   minDate: string;
+  maxDate?: string;
   onChange: (date: string) => void;
   weekdayLabels: readonly string[];
   monthLabel: (monthKey: string) => string;
@@ -21,23 +22,44 @@ type Props = {
 };
 
 const useStyles = makeStyles((t) => ({
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  cell: { width: `${100 / 7}%`, height: 40, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 36, height: 36, borderRadius: t.radius.pill, alignItems: 'center', justifyContent: 'center' },
+  grid: { flexDirection: "row", flexWrap: "wrap" },
+  cell: {
+    width: `${100 / 7}%`,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dot: {
+    width: 36,
+    height: 36,
+    borderRadius: t.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   nav: { padding: t.space[2] },
 }));
 
-const pad = (n: number) => String(n).padStart(2, '0');
+const pad = (n: number) => String(n).padStart(2, "0");
 
 /** 명세서 InlineCalendar: 월 이동, 오늘 이전 비활성, 선택일 buy 원형 */
-export function InlineCalendar({ value, minDate, onChange, weekdayLabels, monthLabel, prevLabel, nextLabel }: Props) {
+export function InlineCalendar({
+  value,
+  minDate,
+  maxDate,
+  onChange,
+  weekdayLabels,
+  monthLabel,
+  prevLabel,
+  nextLabel,
+}: Props) {
   const theme = useTheme();
   const styles = useStyles();
   const [month, setMonth] = useState((value ?? minDate).slice(0, 7));
-  const [y, m] = month.split('-').map(Number);
+  const [y, m] = month.split("-").map(Number);
   const firstWeekday = new Date(y, m - 1, 1).getDay();
   const days = daysInMonth(month);
   const canPrev = month > minDate.slice(0, 7);
+  const canNext = !maxDate || month < maxDate.slice(0, 7);
 
   const cells: (string | null)[] = [
     ...Array.from({ length: firstWeekday }, () => null),
@@ -52,12 +74,21 @@ export function InlineCalendar({ value, minDate, onChange, weekdayLabels, monthL
           disabled={!canPrev}
           accessibilityRole="button"
           accessibilityLabel={prevLabel}
-          style={[styles.nav, !canPrev && { opacity: theme.motion.disabledOpacity }]}
+          style={[
+            styles.nav,
+            !canPrev && { opacity: theme.motion.disabledOpacity },
+          ]}
         >
           <Icon name="back" size="sm" />
         </Pressable>
         <Text variant="bodyStrong">{monthLabel(month)}</Text>
-        <Pressable onPress={() => setMonth(addMonths(month, 1))} accessibilityRole="button" accessibilityLabel={nextLabel} style={styles.nav}>
+        <Pressable
+          disabled={!canNext}
+          onPress={() => canNext && setMonth(addMonths(month, 1))}
+          accessibilityRole="button"
+          accessibilityLabel={nextLabel}
+          style={styles.nav}
+        >
           <Icon name="chevronRight" size="sm" />
         </Pressable>
       </Row>
@@ -71,7 +102,7 @@ export function InlineCalendar({ value, minDate, onChange, weekdayLabels, monthL
         ))}
         {cells.map((date, i) => {
           if (!date) return <View key={`b${i}`} style={styles.cell} />;
-          const disabled = date < minDate;
+          const disabled = date < minDate || (!!maxDate && date > maxDate);
           const selected = date === value;
           return (
             <Pressable
@@ -83,8 +114,18 @@ export function InlineCalendar({ value, minDate, onChange, weekdayLabels, monthL
               accessibilityLabel={date}
               style={styles.cell}
             >
-              <View style={[styles.dot, selected && { backgroundColor: theme.color.brand.solid }]}>
-                <Text variant="label" tone={selected ? 'inverse' : disabled ? 'disabled' : 'primary'}>
+              <View
+                style={[
+                  styles.dot,
+                  selected && { backgroundColor: theme.color.brand.solid },
+                ]}
+              >
+                <Text
+                  variant="label"
+                  tone={
+                    selected ? "inverse" : disabled ? "disabled" : "primary"
+                  }
+                >
                   {Number(date.slice(8))}
                 </Text>
               </View>
@@ -95,4 +136,3 @@ export function InlineCalendar({ value, minDate, onChange, weekdayLabels, monthL
     </View>
   );
 }
-

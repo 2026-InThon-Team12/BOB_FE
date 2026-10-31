@@ -49,6 +49,7 @@ export const emptyDraft = (source: ItemSource = 'manual'): DraftRow => ({
 type AddFlow = {
   rows: DraftRow[];
   setRows: (rows: DraftRow[]) => void;
+  appendRows: (rows: DraftRow[]) => void;
   updateRow: (key: string, patch: Partial<DraftRow>) => void;
   removeRow: (key: string) => void;
   /** 빈 줄을 추가하고 그 key를 돌려준다 */
@@ -65,12 +66,18 @@ const Ctx = createContext<AddFlow | null>(null);
 export function AddFlowProvider({ children }: { children: ReactNode }) {
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [createdIds, setCreatedIds] = useState<string[]>([]);
-  const [registrationKey] = useState(() => createId('reg_'));
+  const [registeredRowKeys, setRegisteredRowKeys] = useState<string[]>([]);
+  const [registrationKey, setRegistrationKey] = useState(() => createId('reg_'));
 
   const value = useMemo<AddFlow>(
     () => ({
       rows,
       setRows,
+      appendRows: (incoming) => {
+        // 이전 등록분은 물품 저장소에 남기고 새 등록 목록에서는 제외한다.
+        setRows((previous) => [...previous.filter((row) => !registeredRowKeys.includes(row.key)), ...incoming]);
+        setRegisteredRowKeys([]);
+      },
       updateRow: (key, patch) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r))),
       removeRow: (key) => setRows((rs) => rs.filter((r) => r.key !== key)),
       addRow: () => {
@@ -79,10 +86,15 @@ export function AddFlowProvider({ children }: { children: ReactNode }) {
         return row.key;
       },
       createdIds,
-      setCreatedIds,
+      setCreatedIds: (ids) => {
+        setCreatedIds(ids);
+        // 새 등록 묶음은 새 키를 쓰고, 같은 묶음의 서버 재시도는 키를 유지한다.
+        setRegistrationKey(createId('reg_'));
+        setRegisteredRowKeys(rows.filter((row) => row.included).map((row) => row.key));
+      },
       registrationKey,
     }),
-    [rows, createdIds, registrationKey],
+    [rows, createdIds, registrationKey, registeredRowKeys],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

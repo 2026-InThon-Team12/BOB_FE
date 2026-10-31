@@ -57,7 +57,7 @@ module.exports = defineConfig([
 
   // 화면: 뷰모델과 컴포넌트를 배치만 한다
   {
-    files: ['src/app/**/*.{ts,tsx}'],
+    files: ['src/app/**/*.{ts,tsx}', 'src/screens/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': noVisualLiterals,
       'no-restricted-imports': restrict([stateLibs, dataInternals, aiInternals, beClient]),

@@ -50,6 +50,17 @@ describe('마이그레이션', () => {
 });
 
 describe('저장 데이터 불러오기', () => {
+  it('다른 사진의 물품을 추가 등록하고 저장소를 다시 읽어도 이전 물품과 질문을 유지한다', async () => {
+    const [first] = addItems([{ name: '첫 사진 키보드', price: 45000, category: 'digital', reasons: ['need'], source: 'screenshot' }]);
+    const firstQuestions = Object.values(getState().questions).filter((q) => q.itemId === first.id);
+    const [second] = addItems([{ name: '둘째 사진 티셔츠', price: 19000, category: 'clothing', reasons: ['need'], source: 'screenshot' }]);
+
+    expect(Object.values(getState().items)).toEqual([first, second]);
+    await useDataStore.persist.rehydrate();
+    expect(Object.values(getState().items)).toEqual([first, second]);
+    expect(Object.values(getState().questions).filter((q) => q.itemId === first.id)).toEqual(firstQuestions);
+  });
+
   it('정상 데이터는 그대로 불러온다', async () => {
     loadDemoSeed();
     const saved = getState();

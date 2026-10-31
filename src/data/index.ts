@@ -50,3 +50,5 @@ export { loadDemoSeed } from './seed';
 
 export { DataError } from './errors';
 export type { DataState } from './schema';
+export { apkActions, useApkState } from './apkStore';
+export { apkRepository } from './apkRepository';

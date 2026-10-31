@@ -14,8 +14,8 @@ export async function getGuestToken(): Promise<string | null> {
 }
 
 export async function setGuestToken(token: string): Promise<void> {
-  cached = token;
   await AsyncStorage.setItem(TOKEN_KEY, token);
+  cached = token;
 }
 
 export async function clearGuestToken(): Promise<void> {

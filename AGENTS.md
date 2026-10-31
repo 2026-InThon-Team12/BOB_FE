@@ -44,8 +44,8 @@ Docs: https://docs.expo.dev/eas/index.md
 
 전체 설계는 `~/.claude/plans/happy-noodling-sonnet.md`, 팀원 확인 사항은 상위 폴더의 `팀원_확인사항.md`에 있다.
 
-- **데이터는 전부 로컬 저장**(서버 저장 없음). 원격 호출은 저장하지 않는 AI 호출(`src/ai`)뿐이다.
-- **BE 클라이언트** `src/api/`: `BE api 공유.md`의 엔드포인트 전체. 요청·응답 형식은 스펙 대기 중이라 `unknown`. 지금은 `src/ai/real`에서 AI 2개(item-drafts, cart-extractions)만 쓰고, 화면·뷰모델에서는 import 금지(ESLint).
+- **apklike 브랜치는 BOB_ANDROID 동작을 기준으로 한다.** 물품·목표·지갑·리포트는 서버가 원본이다. 초안·질문·답변·이미지 crop만 `apkRepository`의 계정별 로컬 저장소에 보관한다. 기존 로컬 전용 스토어로 서버 기록을 덮어쓰지 않는다.
+- **BE 클라이언트** `src/api/`: `src/data/apkRepository.ts`에서 인증된 API를 호출한다. 화면·뷰모델 직접 import 금지(ESLint). 401 오류 시 기존 토큰을 버리거나 게스트 계정을 자동 재발급하지 않는다.
 - **레이어**: `src/app`(화면 JSX) → `src/features`(뷰모델 훅) → `src/data`(로컬 스토어) / `src/ai`. `src/components`는 props만 받는다. `src/lib/calc`, `src/config`는 순수 TS. 경계는 `eslint.config.js`의 `no-restricted-imports`가 강제한다.
 - **디자인 교체 지점**: `src/theme/tokens.ts`(토큰) → `src/components/ui`(프리미티브) → 화면 JSX. 화면·뷰모델에는 색·글꼴·간격 리터럴 금지 (`Stack`/`Text` props나 `makeStyles`의 theme 값을 쓴다).
 - **문구**는 `src/constants/copy.ts`, **정책 값**은 `src/config/policy.ts`, **환경 변수**는 `src/config/env.ts`에서만 읽는다.
