@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { makeStyles, useTheme } from '@/theme';
@@ -9,6 +9,8 @@ type Props = Omit<TextInputProps, 'style'> & {
   label?: string;
   helper?: string;
   error?: string;
+  /** 입력칸 왼쪽에 붙는 아이콘 등 */
+  prefix?: ReactNode;
   /** 입력칸 오른쪽에 붙는 단위 (예: "원") */
   suffix?: string;
 };
@@ -34,7 +36,7 @@ const useStyles = makeStyles((t) => ({
   wrap: { gap: t.space[1] },
 }));
 
-export function Input({ label, helper, error, suffix, onFocus, onBlur, editable = true, ...rest }: Props) {
+export function Input({ label, helper, error, prefix, suffix, onFocus, onBlur, editable = true, ...rest }: Props) {
   const theme = useTheme();
   const styles = useStyles();
   const [focused, setFocused] = useState(false);
@@ -53,6 +55,7 @@ export function Input({ label, helper, error, suffix, onFocus, onBlur, editable 
         </Text>
       )}
       <View style={[styles.field, { borderColor }, !editable && { opacity: theme.motion.disabledOpacity }]}>
+        {prefix}
         <TextInput
           {...rest}
           editable={editable}

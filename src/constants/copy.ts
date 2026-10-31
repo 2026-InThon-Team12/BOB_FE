@@ -297,6 +297,8 @@ export const copy = {
     nameLabel: '이름',
     namePlaceholder: '갖고 싶은 물건 이름',
     priceLabel: '가격',
+    productUrlLabel: '상품 링크 (선택)',
+    productUrlPlaceholder: 'https://',
     pickRegistered: '등록한 물건에서 고르기',
     registeredChip: (name: string, price: number) =>
       `${name.length > 8 ? `${name.slice(0, 8)}…` : name} · ${formatWon(price)}`,

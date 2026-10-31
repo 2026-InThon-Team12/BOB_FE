@@ -17,7 +17,7 @@ const validate = (name: string | undefined, price: number | undefined) => {
 };
 
 /** 새 목표를 만들고 활성 목표로 지정한다 */
-export function createGoal(input: { name: string; price: number; imageUri?: string; carriedAmount?: number }): Goal {
+export function createGoal(input: { name: string; price: number; imageUri?: string; productUrl?: string; carriedAmount?: number }): Goal {
   validate(input.name, input.price);
   const carried = Math.max(0, Math.min(input.price, Math.round(input.carriedAmount ?? 0)));
   const goal: Goal = {
@@ -25,6 +25,7 @@ export function createGoal(input: { name: string; price: number; imageUri?: stri
     name: input.name.trim(),
     price: input.price,
     imageUri: input.imageUri,
+    productUrl: input.productUrl?.trim() || undefined,
     isActive: true,
     createdAt: getNowIso(),
     ...(carried > 0 ? { carriedAmount: carried } : {}),
@@ -33,11 +34,16 @@ export function createGoal(input: { name: string; price: number; imageUri?: stri
   return goal;
 }
 
-export function updateGoal(id: string, patch: Partial<Pick<Goal, 'name' | 'price' | 'imageUri'>>): Goal {
+export function updateGoal(id: string, patch: Partial<Pick<Goal, 'name' | 'price' | 'imageUri' | 'productUrl'>>): Goal {
   const goal = getState().goals[id];
   if (!goal) throw new DataError(`목표를 찾을 수 없어요: ${id}`, 'not_found');
   validate(patch.name, patch.price);
-  const next = { ...goal, ...patch, name: patch.name?.trim() ?? goal.name };
+  const next = {
+    ...goal,
+    ...patch,
+    name: patch.name?.trim() ?? goal.name,
+    ...(patch.productUrl !== undefined ? { productUrl: patch.productUrl.trim() || undefined } : {}),
+  };
   update((s) => ({ goals: { ...s.goals, [id]: next } }));
   return next;
 }

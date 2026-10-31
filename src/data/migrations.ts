@@ -7,13 +7,14 @@
  *   3. __tests__/migrations.test.ts에 이전 버전 샘플을 추가한다.
  */
 
-export const CURRENT_VERSION = 1;
+export const CURRENT_VERSION = 2;
 
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
 
 /** key: 이 버전에서 다음 버전으로 올리는 함수 */
 const MIGRATIONS: Record<number, Migration> = {
-  // 예) 1: (s) => ({ ...s, newField: [] }),
+  // Goal.productUrl은 선택 필드라 기존 목표 데이터는 그대로 유효하다.
+  1: (s) => s,
 };
 
 export class MigrationError extends Error {}

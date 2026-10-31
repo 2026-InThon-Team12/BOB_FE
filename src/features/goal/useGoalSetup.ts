@@ -28,6 +28,7 @@ export function useGoalSetup(requested: GoalSetupMode | undefined) {
   const [transfer, setTransfer] = useState(true);
   const [name, setName] = useState('');
   const [price, setPrice] = useState<number | null>(null);
+  const [productUrl, setProductUrl] = useState('');
   const [imageUri, setImageUri] = useState<string | undefined>();
   const [photoLoading, setPhotoLoading] = useState(false);
 
@@ -57,6 +58,8 @@ export function useGoalSetup(requested: GoalSetupMode | undefined) {
     setName,
     price,
     setPrice,
+    productUrl,
+    setProductUrl,
     imageUri,
     photoLoading,
     pickPhoto: async () => {
@@ -73,19 +76,20 @@ export function useGoalSetup(requested: GoalSetupMode | undefined) {
     },
     removePhoto: () => setImageUri(undefined),
     registered,
-    /** 등록한 물건을 고르면 이름·가격(·사진) 자동 입력 */
+    /** 등록한 물건을 고르면 이름·가격·상품 링크(·사진) 자동 입력 */
     pickRegistered: (id: string) => {
       const item = registered.find((i) => i.id === id);
       if (!item) return;
       setName(item.name);
       setPrice(item.price);
+      setProductUrl(item.sourceUrl ?? '');
       if (item.imageUri) setImageUri(item.imageUri);
     },
     ready,
     preview,
     submit: (): boolean => {
       if (!ready) return false;
-      createGoal({ name, price: price!, imageUri, carriedAmount: preview?.carried ?? 0 });
+      createGoal({ name, price: price!, productUrl, imageUri, carriedAmount: preview?.carried ?? 0 });
       return true;
     },
   };

@@ -145,10 +145,11 @@ describe('매일 답변', () => {
 
 describe('목표 · 참기 · 지출', () => {
   it('새 목표를 만들면 이전 목표는 비활성', () => {
-    const first = createGoal({ name: '피규어', price: 280_000 });
+    const first = createGoal({ name: '피규어', price: 280_000, productUrl: '  https://shop.example.com/figure  ' });
     const second = createGoal({ name: '여행', price: 500_000 });
     const goals = getState().goals;
     expect(goals[first.id].isActive).toBe(false);
+    expect(goals[first.id].productUrl).toBe('https://shop.example.com/figure');
     expect(goals[second.id].isActive).toBe(true);
   });
 

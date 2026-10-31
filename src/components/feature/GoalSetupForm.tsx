@@ -35,6 +35,8 @@ export type GoalSetupFormModel = {
   setName: (v: string) => void;
   price: number | null;
   setPrice: (v: number | null) => void;
+  productUrl: string;
+  setProductUrl: (v: string) => void;
   imageUri?: string;
   photoLoading: boolean;
   pickPhoto: () => void;
@@ -117,6 +119,16 @@ export function GoalSetupForm({ form }: { form: GoalSetupFormModel }) {
             </Stack>
           </Row>
           <MoneyInput label={copy.goalSetup.priceLabel} placeholder="0" value={form.price} onChangeValue={form.setPrice} />
+          <Input
+            label={copy.goalSetup.productUrlLabel}
+            placeholder={copy.goalSetup.productUrlPlaceholder}
+            value={form.productUrl}
+            onChangeText={form.setProductUrl}
+            keyboardType="url"
+            autoCapitalize="none"
+            autoCorrect={false}
+            prefix={<Icon name="link" size="sm" tone="secondary" />}
+          />
           {form.registered.length > 0 && (
             <Stack gap={2}>
               <Text variant="caption" tone="secondary">

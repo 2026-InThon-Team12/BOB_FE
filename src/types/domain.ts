@@ -158,6 +158,8 @@ export const GoalSchema = z.object({
   name: z.string().min(1),
   price: Won,
   imageUri: z.string().optional(),
+  /** 목표 물건을 나중에 다시 찾거나 구매할 때 사용할 상품 링크 */
+  productUrl: z.string().optional(),
   isActive: z.boolean(),
   createdAt: IsoString,
   achievedAt: IsoString.optional(),

@@ -42,6 +42,11 @@ describe('마이그레이션', () => {
     expect(migrate(data, CURRENT_VERSION)).toBe(data);
     expect(() => migrate(data, CURRENT_VERSION + 1)).toThrow(MigrationError);
   });
+
+  it('상품 링크가 없던 버전 1 데이터도 그대로 올린다', () => {
+    const data = { goals: { g1: { id: 'g1', name: '피규어', price: 100_000 } } };
+    expect(migrate(data, 1)).toEqual(data);
+  });
 });
 
 describe('저장 데이터 불러오기', () => {
