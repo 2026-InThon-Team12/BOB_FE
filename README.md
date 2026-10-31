@@ -27,9 +27,16 @@ BOB는 단순히 소비를 막는 앱이 아닙니다. 구매 전에는 물건�
 
 ### 1. 패키지 설치
 
+Node.js 24 LTS를 권장합니다. Expo SDK 58의 네이티브 패키지는 `npx expo install`로 호환 버전을 유지합니다.
+
 ```bash
 npm install
 ```
+
+ESLint 10은 `@eslint/compat`로 Expo의 기존 플러그인 규칙을 유지합니다.
+`package.json`의 제한된 `overrides`는 테스트 도구의 지원 종료 패키지를 제거하기 위한 것입니다.
+`test-exclude` 8은 오래된 `glob`·`inflight`를, `jsdom` 27은 `whatwg-encoding`을 대체합니다.
+jsdom은 Jest 30이 사용하는 `ResourceLoader` API가 유지되는 버전을 사용합니다.
 
 ### 2. 환경 변수 설정
 
@@ -55,6 +62,23 @@ EXPO_PUBLIC_API_BASE_URL=https://bob-be.vercel.app
 작은 스크린샷은 PNG, 큰 파일은 JPEG 품질 조정으로 4,000,000바이트 이하로 전송합니다.
 변환된 파일의 MIME·이름을 맞춰 `image` multipart 필드로 업로드합니다.
 사진 분석 오류는 샘플 상품이나 다른 오류로 대체하지 않고 재시도 화면에 표시합니다.
+
+#### Android Expo Go에서 사진 선택 직후 연결 오류가 나는 경우
+
+SDK 58에서는 네이티브 기본 `fetch`가 `expo/fetch`입니다.
+이 구현은 이전 React Native 방식의 `{ uri, name, type }` multipart 파일을 처리하지 못합니다.
+전송 전 변환 오류도 기존 클라이언트에서는 네트워크 오류로 표시됐습니다.
+현재는 `expo-file-system`의 `File`과 명시적인 `expo/fetch`로 전송하며,
+웹에서는 변환된 `Blob`을 사용합니다. `Content-Type`의 multipart boundary는 fetch가 생성합니다.
+
+업데이트 후 `npx expo start --clear`로 개발 서버를 재시작하고 Expo Go에서 다시 엽니다.
+참고: [SDK 58 fetch](https://docs.expo.dev/versions/v58.0.0/sdk/expo/#expofetch-api),
+[공식 파일 업로드 방식](https://docs.expo.dev/versions/v58.0.0/sdk/filesystem/#uploading-files-using-expofetch).
+
+상품명·가격 인식과 상품 썸네일 추출은 별개입니다.
+BE가 `analysis_method: "ocr"`, `PRODUCT_IMAGE_UNAVAILABLE`을 반환하면 상품 이미지는 없습니다.
+썸네일 추출에는 BE의 vision 모델 지원 검증이 필요합니다(`BOB_BE`의 `scripts.check_lablup`).
+FE는 서버가 제공한 `image_url` 또는 검증된 `image_crop`을 표시합니다.
 
 ### 3. 앱 실행
 

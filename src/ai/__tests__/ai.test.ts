@@ -158,6 +158,39 @@ describe('real mappers', () => {
     ).toMatchObject({ name: '기계식 키보드', category: 'digital', source: 'link', sourceUrl });
   });
 
+  it('vision 상품 이미지 crop을 로컬에서 표시할 수 있는 data URI로 변환한다', () => {
+    const imageCrop = { mime_type: 'image/jpeg', base64: '/9j/2Q==', width: 100, height: 80, box: [0, 0, 1000, 1000] };
+    const result = mapCartScreenshot({
+      items: [{ name: '키보드', price: 30000, image_url: null, image_crop: imageCrop }],
+      analysis_method: 'vision',
+    });
+    expect(result.items[0].imageUri).toBe('data:image/jpeg;base64,/9j/2Q==');
+  });
+
+  it('상품 이미지 URL이 있으면 crop보다 우선한다', () => {
+    const result = mapCartScreenshot({
+      items: [{ name: '키보드', image_url: 'https://example.com/keyboard.jpg',
+        image_crop: { mime_type: 'image/jpeg', base64: '/9j/2Q==' } }],
+      analysis_method: 'vision',
+    });
+    expect(result.items[0].imageUri).toBe('https://example.com/keyboard.jpg');
+  });
+
+  it.each([
+    null,
+    {},
+    { mime_type: 'image/svg+xml', base64: 'PHN2Zz4=' },
+    { mime_type: 'image/jpeg', base64: '' },
+    { mime_type: 'image/jpeg', base64: 'invalid base64' },
+    { mime_type: 'image/jpeg', base64: '/9j/2Q=' },
+  ])('crop이 없거나 잘못돼도 이름과 가격은 유지한다: %j', (imageCrop) => {
+    const result = mapCartScreenshot({
+      items: [{ name: '키보드', price: 30000, image_crop: imageCrop }],
+      analysis_method: 'vision',
+    });
+    expect(result.items[0]).toMatchObject({ name: '키보드', price: 30000, imageUri: undefined });
+  });
+
   it('형식이 다르면 invalid_response', () => {
     expect(() => mapCartScreenshot({ wrong: true })).toThrow(AiRequestError);
     expect(() => mapQuestions([{ text: 'q', options: [{ label: 'a', countsAsUse: true }] }])).toThrow(AiRequestError);

@@ -89,10 +89,20 @@ export function mapCategory(data: unknown): CategoryGuess {
   return category ? { category, confidence: confidence ?? 0.5 } : { category: 'etc', confidence: 0 };
 }
 
+const ImageCropDto = z.object({
+  mime_type: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  base64: z.string().min(1).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+});
+
+function cropImageUri(crop: unknown): string | undefined {
+  const result = ImageCropDto.safeParse(crop);
+  return result.success ? `data:${result.data.mime_type};base64,${result.data.base64}` : undefined;
+}
+
 const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sourceUrl?: string): ItemDraft => ({
   name: dto.name.trim(),
   price: dto.price,
-  imageUri: dto.image_url ?? dto.imageUrl ?? undefined,
+  imageUri: dto.image_url ?? dto.imageUrl ?? cropImageUri(dto.image_crop),
   category: toCategory(dto.category),
   // OpenAPI에는 confidence가 없으므로, AI 추천 표시를 위한 중립값을 사용한다.
   categoryConfidence: toCategory(dto.category) ? (dto.confidence ?? 0.5) : undefined,

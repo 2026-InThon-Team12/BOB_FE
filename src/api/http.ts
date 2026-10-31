@@ -2,10 +2,13 @@
  * BE HTTP 공통 처리: 기본 주소 + /api/v1, 시간 제한, 인증 헤더, JSON·이미지 전송.
  * 금액은 원 단위 정수로 주고받는다 (BE 공유 문서).
  */
+import { fetch } from 'expo/fetch';
+import { File } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import { env } from '@/config/env';
 import { policy } from '@/config/policy';
+import { copy } from '@/constants/copy';
 
 import { ApiError } from './errors';
 
@@ -47,12 +50,13 @@ export const buildUrl = (path: string, query?: RequestOptions['query']) => {
 function toFormData({ field = 'image', upload }: NonNullable<RequestOptions['image']>): FormData {
   const form = new FormData();
   const name = upload.name ?? 'upload.jpg';
-  const type = upload.mimeType ?? 'image/jpeg';
   if (Platform.OS === 'web' && upload.file) {
     form.append(field, upload.file, name);
   } else {
-    // React Native의 FormData는 파일을 이 형태로 받는다
-    form.append(field, { uri: upload.uri, name, type } as unknown as Blob);
+    // SDK 58의 expo/fetch는 기존 { uri, name, type } 객체를 파일로 처리하지 않는다.
+    const file = new File(upload.uri);
+    if (!file.exists) throw new Error(copy.register.imageUnreadable);
+    form.append(field, file);
   }
   return form;
 }
@@ -75,16 +79,18 @@ export async function request(opts: RequestOptions): Promise<unknown> {
   const timer = setTimeout(() => controller.abort(), policy.ai.timeoutMs);
   const url = buildUrl(opts.path, opts.query);
   let res: Response;
+  let text: string;
   try {
     res = await fetch(url, { method: opts.method, headers, body, signal: controller.signal });
+    text = await res.text();
   } catch (e) {
-    const aborted = e instanceof Error && e.name === 'AbortError';
-    throw new ApiError(aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.', aborted ? 'timeout' : 'network');
+    const aborted = controller.signal.aborted || (e instanceof Error && e.name === 'AbortError');
+    throw new ApiError(aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.',
+      aborted ? 'timeout' : 'network', undefined, undefined, { cause: e });
   } finally {
     clearTimeout(timer);
   }
 
-  const text = await res.text();
   let data: unknown = undefined;
   if (text) {
     try {
