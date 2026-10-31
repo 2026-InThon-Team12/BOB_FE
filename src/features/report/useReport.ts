@@ -6,7 +6,8 @@ import { CATEGORY_LABELS } from '@/constants/categories';
 import { REASON_SHORT_LABELS } from '@/constants/reasons';
 import { useAnswers, useExpenses, useImpulses, useItems, useQuestions, useThisMonth } from '@/data';
 import { monthlyOutsideSpending } from '@/lib/calc/outsideSpending';
-import { categoryTendency, monthlySummary, reasonStats, tendencyBadge, VERDICT_RATIO } from '@/lib/calc';
+import { monthlySummary, reasonStats, tendencyBadge, VERDICT_RATIO } from '@/lib/calc';
+import { categoryReviewUsage } from '@/lib/calc/tendency';
 import { addMonths } from '@/lib/date';
 
 export function useReport() {
@@ -22,23 +23,26 @@ export function useReport() {
 
   const data = useMemo(() => {
     // 예측 vs 실제 · 이유별 포기율은 표본이 적어서 지금까지 기록 전체로 본다
-    const tendencies = categoryTendency({ items, questions, answers, policy })
+    const tendencies = categoryReviewUsage({ items, questions, answers, policy })
       .slice()
-      .sort((a, b) => b.ratio - a.ratio);
-    const scale = Math.max(1, ...tendencies.flatMap((t) => [t.predictedDays, t.actualDays]));
+      .sort((a, b) => (b.ratio ?? -1) - (a.ratio ?? -1));
+    const scale = Math.max(1, ...tendencies.flatMap((t) => [t.predictedDays ?? 0, t.actualDays]));
     const compare = tendencies.map((t) => ({
       category: t.category,
       label: CATEGORY_LABELS[t.category],
       predictedDays: t.predictedDays,
       actualDays: t.actualDays,
-      predictedRatio: t.predictedDays / scale,
+      minDays: t.minDays,
+      maxDays: t.maxDays,
+      samples: t.samples,
+      predictedRatio: (t.predictedDays ?? 0) / scale,
       actualRatio: t.actualDays / scale,
-      badge: tendencyBadge(t.ratio),
+      badge: t.ratio === null ? null : tendencyBadge(t.ratio),
     }));
 
     const top = tendencies[0];
     const finding =
-      top && top.ratio >= VERDICT_RATIO.muchLess
+      top && top.ratio !== null && top.ratio >= VERDICT_RATIO.muchLess
         ? { label: CATEGORY_LABELS[top.category], ratio: top.ratio }
         : null;
 

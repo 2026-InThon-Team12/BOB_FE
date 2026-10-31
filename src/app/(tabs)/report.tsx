@@ -108,15 +108,18 @@ export default function ReportScreen() {
             </Text>
           ) : (
             r.compare.map((c) => {
-              const badge = badgeOf(c.badge);
+              const badge = c.badge ? badgeOf(c.badge) : null;
               return (
                 <Stack key={c.category} gap={2}>
                   <Row justify="space-between">
                     <Text variant="bodyStrong">{c.label}</Text>
-                    <Badge label={badge.label} tone={badge.tone} />
+                    {badge && <Badge label={badge.label} tone={badge.tone} />}
                   </Row>
-                  <BarRow value={copy.report.days(c.predictedDays)} ratio={c.predictedRatio} tone="predicted" valueTone="tertiary" />
-                  <BarRow value={copy.report.days(c.actualDays)} ratio={c.actualRatio} strong />
+                  {c.predictedDays === null
+                    ? <Text tone="secondary">{copy.report.predictionUnavailable}</Text>
+                    : <BarRow value={copy.report.days(c.predictedDays)} ratio={c.predictedRatio} tone="predicted" valueTone="tertiary" />}
+                  <BarRow value={copy.report.actualRange(c.minDays,c.maxDays)} ratio={c.actualRatio} strong />
+                  <Text variant="caption" tone="tertiary">{copy.report.reviewSamples(c.samples)}</Text>
                 </Stack>
               );
             })
