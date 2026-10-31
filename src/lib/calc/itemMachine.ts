@@ -30,7 +30,7 @@ export const simulationDayNumber = (item: Item, today: string) => item.simulatio
 export const daysLeft = (item: Item, today: string) => Math.max(0, diffDays(today, simulationEndDay(item)));
 /** 구매 후 점검 가능일 */
 export const reviewDueDay = (item: Item, policy: Pick<Policy, 'reviewAfterDays'>) =>
-  item.purchase ? addDays(dateKeyOf(item.purchase.boughtAt), policy.reviewAfterDays) : null;
+  item.purchase ? item.purchase.reviewDueOn ?? addDays(dateKeyOf(item.purchase.boughtAt), policy.reviewAfterDays) : null;
 
 export function derivePhase(item: Item, today: string, policy: Pick<Policy, 'reviewAfterDays'>): ItemPhase {
   switch (item.status) {

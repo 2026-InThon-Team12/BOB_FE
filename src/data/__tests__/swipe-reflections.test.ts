@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bobApi } from '@/api';
-import { addItems, getToday, loadTodayReflections, resetAllData, saveReflection } from '@/data';
+import { addItems, getToday, loadTodayReflections, resetAllData, saveReflection, summarizeItem, shiftClock } from '@/data';
+import { reflectionDue } from '@/data/actions/reflections';
+import { hasNotificationWork } from '@/lib/calc/notificationWork';
 import { getState, update } from '@/data/store';
 import { applyRemoteItem } from '@/data/actions/remoteItems';
 import { addDays } from '@/lib/date';
@@ -9,10 +11,10 @@ import { chooseSwipeQuestion } from '@/lib/swipeQuestions';
 import { SWIPE_ANSWER_SPEC, swipePreCatalog } from '@/constants/swipeQuestionCatalog';
 import { QuestionSchema, type Item, type Question } from '@/types';
 
-jest.mock('@/api',()=>({bobApi:{simulations:{localQuestion:jest.fn()},purchases:{localQuestion:jest.fn()}}}));
+jest.mock('@/api',()=>({bobApi:{simulations:{localQuestion:jest.fn(),summarize:jest.fn()},purchases:{localQuestion:jest.fn()}}}));
 jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
 const input = {name:'요가매트',price:20000,category:'hobby' as const,reasons:['need' as const],source:'manual' as const};
-beforeEach(()=>{resetAllData();jest.clearAllMocks();});
+beforeEach(()=>{resetAllData();jest.resetAllMocks();});
 function setup(): Item {
   const [item] = addItems([input]);
   return applyRemoteItem(item.id,{id:'server',decision:null,purchase:null,simulation:{id:'simulation',duration_days:3,start_date:getToday(),end_date_exclusive:addDays(getToday(),3),observation_dates:[getToday(),addDays(getToday(),1),addDays(getToday(),2)]}});
@@ -79,4 +81,42 @@ it('does not accept a card or answer that failed to persist',async()=>{
   (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
   await expect(saveReflection('server-question',{choice_code:'YES'},'예')).rejects.toThrow('disk full');
   expect(Object.values(getState().answers)).toHaveLength(0);
+});
+
+it.each([undefined, 21])('keeps purchased cards and reminders closed until the due day (server delay %s)',async serverDelay=>{
+  const original = setup(), today = getToday();
+  const due = addDays(today, serverDelay ?? 14);
+  const item: Item = {...original,status:'bought',purchaseId:'purchase',purchase:{boughtAt:`${today}T00:00:00+09:00`,reviewDueOn:serverDelay ? due : undefined}};
+  const q = {...chooseSwipeQuestion(item,today,[]),id:'old-post'};
+  await update(s=>({items:{...s.items,[item.id]:item},questions:{...s.questions,[q.id]:q}}));
+  for (const day of [today,addDays(due,-1)]) {
+    expect(reflectionDue(item,day)).toBe(false);
+    expect(hasNotificationWork([item],[q],[],day)).toBe(false);
+  }
+  await loadTodayReflections();
+  expect(bobApi.purchases.localQuestion).not.toHaveBeenCalled();
+  await expect(saveReflection(q.id,{choice_code:'YES'},'예')).rejects.toThrow();
+  expect(reflectionDue(item,due)).toBe(true);
+  expect(hasNotificationWork([item],[q],[],due)).toBe(true);
+});
+
+it('preserves a local summary on remote failure and retries the same responses successfully',async()=>{
+  const item = setup();
+  await update(s=>({items:{...s.items,[item.id]:{...item,simulation:{startAt:`${getToday()}T00:00:00+09:00`,endDate:getToday(),durationDays:0,observationDates:[]}}}}));
+  const request = bobApi.simulations.summarize as jest.Mock;
+  request.mockRejectedValueOnce(new Error('unavailable')).mockResolvedValue({result:{expected_used_days:null,answer_coverage:0,comparison_eligible:false,comparison_reason:'REFLECTION_NOT_USAGE'},ai_summary:{summary:'응답이 없어요.',method:'TEMPLATE'}});
+  await expect(summarizeItem(item.id)).rejects.toThrow('unavailable');
+  expect(getState().items[item.id].summary).toMatchObject({syncState:'pending',reflectionCounts:{YES:0,UNSURE:0,NO:0}});
+  await summarizeItem(item.id);
+  await summarizeItem(item.id);
+  expect(request).toHaveBeenCalledTimes(2);
+  expect(getState().items[item.id].summary).toMatchObject({syncState:'synced',text:'응답이 없어요.'});
+});
+
+it('previews time-shifted summaries locally without sending future records to the server',async()=>{
+  const item = setup();
+  shiftClock(3);
+  await summarizeItem(item.id);
+  expect(bobApi.simulations.summarize).not.toHaveBeenCalled();
+  expect(getState().items[item.id].summary?.syncState).toBe('preview');
 });

@@ -68,6 +68,7 @@ export default function ResultScreen() {
         {error && <><Text tone="warning">{error}</Text><Button label={reflectionCopy.retry} onPress={refresh}/></>}
         {item.summary ? <>
           <Text>{item.summary.text}</Text>
+          {item.summary.syncState === 'preview' && <Text tone="secondary">{reflectionCopy.summaryPreview}</Text>}
           <Text tone="secondary">{item.summary.method === 'AI' ? reflectionCopy.aiSummary : reflectionCopy.fallbackSummary} · {reflectionCopy.coverage(item.summary.coverage)}</Text>
           {item.summary.reflectionCounts ? <>
             <Text>{reflectionCopy.reflectionCounts(item.summary.reflectionCounts.YES,item.summary.reflectionCounts.UNSURE,item.summary.reflectionCounts.NO)}</Text>
@@ -76,7 +77,7 @@ export default function ResultScreen() {
             {item.summary.expectedDays !== null && <Text>{reflectionCopy.expected(item.summary.expectedDays)}</Text>}
             {!item.summary.eligible && <Text tone="secondary">{reflectionCopy.insufficient}</Text>}
           </>}
-        </> : !summaryLoading && <Text>{reflectionCopy.unfinished}</Text>}
+        </> : !summaryLoading && view.phase !== 'awaitingDecision' && <Text>{reflectionCopy.unfinished}</Text>}
       </Stack></Card>
 
       {view.warning && (

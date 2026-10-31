@@ -2,12 +2,13 @@
 import { z } from 'zod';
 import { bobApi } from '@/api';
 import { env } from '@/config/env';
+import { policy } from '@/config/policy';
 import { SHORT_QUESTION_VERSION } from '@/constants/swipeQuestionCatalog';
 import { reflectionCopy } from '@/constants/copy';
 import { dateKeyOf } from '@/lib/date';
 import { chooseSwipeQuestion } from '@/lib/swipeQuestions';
 import { simulationDayKeys } from '@/lib/calc/simulation';
-import { simulationEndDay } from '@/lib/calc/itemMachine';
+import { reviewDueDay, simulationEndDay } from '@/lib/calc/itemMachine';
 import { requestDigest } from '@/lib/requestDigest';
 import type { DailyAnswer, Item, Question } from '@/types';
 import { getState, update } from '../store';
@@ -30,7 +31,8 @@ function single<T>(key: string, run: () => Promise<T>): Promise<T> {
 export function reflectionDue(item: Item, today: string): boolean {
   if (item.registrationState === 'pending') return false;
   if (item.status === 'simulating') return simulationDayKeys(item).includes(today);
-  return item.status === 'bought' && !!item.purchase && dateKeyOf(item.purchase.boughtAt) <= today;
+  const due = reviewDueDay(item, policy);
+  return item.status === 'bought' && due !== null && today >= due;
 }
 export function fallbackQuestion(item: Item, today: string): Question {
   const post = item.status === 'bought';
@@ -117,14 +119,21 @@ export async function summarizeItem(itemId: string): Promise<void> {
     const item = getState().items[itemId]; if (!item || item.status !== 'simulating' || getToday() < simulationEndDay(item)) return;
     const m = reflectionMetrics(item);
     const fingerprint = requestDigest(JSON.stringify(m.responses));
-    if (item.summary?.fingerprint === fingerprint && (!m.counts || item.summary.reflectionCounts)) return;
-    let summary: NonNullable<Item['summary']> = {text:reflectionCopy.localSummary(item.simulation.durationDays,m.responses.length,m.expected), method:'TEMPLATE', expectedDays:m.expected, coverage:m.coverage, eligible:m.eligible, reason:m.counts ? 'REFLECTION_NOT_USAGE' : m.eligible ? null : 'INSUFFICIENT_EVIDENCE', reflectionCounts:m.counts, fingerprint};
-    if (item.simulationId && env.aiMode === 'real') {
-      const dto = z.object({result:z.object({expected_used_days:z.number().nullable(),answer_coverage:z.number(),comparison_eligible:z.boolean(),comparison_reason:z.string().nullable()}),ai_summary:z.object({summary:z.string(),method:z.string()})}).parse(await bobApi.simulations.summarize(item.simulationId,{responses:m.responses}));
-      summary = {...summary,text:dto.ai_summary.summary,method:dto.ai_summary.method,expectedDays:dto.result.expected_used_days,coverage:dto.result.answer_coverage,eligible:dto.result.comparison_eligible,reason:dto.result.comparison_reason};
+    const remote = !!item.simulationId && env.aiMode === 'real';
+    const preview = remote && getState().settings.clockOffsetDays !== 0;
+    const syncState = preview ? 'preview' : remote ? 'pending' : 'local';
+    if (item.summary?.fingerprint === fingerprint && (!m.counts || item.summary.reflectionCounts)
+      && item.summary.syncState === (preview ? 'preview' : remote ? 'synced' : 'local')) return;
+    let summary: NonNullable<Item['summary']> = {text:reflectionCopy.localSummary(item.simulation.durationDays,m.responses.length,m.expected), method:'TEMPLATE', expectedDays:m.expected, coverage:m.coverage, eligible:m.eligible, reason:m.counts ? 'REFLECTION_NOT_USAGE' : m.eligible ? null : 'INSUFFICIENT_EVIDENCE', reflectionCounts:m.counts, fingerprint, syncState};
+    // Keep device-owned evidence visible even when the optional remote summary fails.
+    await update(s => ({items:{...s.items,[itemId]:{...s.items[itemId],summary}}}));
+    // A developer clock offset does not advance the server's observation period.
+    if (remote && !preview) {
+      const dto = z.object({result:z.object({expected_used_days:z.number().nullable(),answer_coverage:z.number(),comparison_eligible:z.boolean(),comparison_reason:z.string().nullable()}),ai_summary:z.object({summary:z.string(),method:z.string()})}).parse(await bobApi.simulations.summarize(item.simulationId!,{responses:m.responses}));
+      summary = {...summary,text:dto.ai_summary.summary,method:dto.ai_summary.method,expectedDays:dto.result.expected_used_days,coverage:dto.result.answer_coverage,eligible:dto.result.comparison_eligible,reason:dto.result.comparison_reason,syncState:'synced'};
     }
     if (m.counts) summary = {...summary,expectedDays:null,eligible:false,reason:'REFLECTION_NOT_USAGE'};
-    update(s => ({items:{...s.items,[itemId]:{...s.items[itemId],summary}}}));
+    await update(s => ({items:{...s.items,[itemId]:{...s.items[itemId],summary}}}));
   });
 }
 export async function decideItemRemote(itemId: string, action: 'buy'|'abandon'|'hold'): Promise<Item> {

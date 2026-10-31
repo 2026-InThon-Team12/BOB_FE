@@ -101,7 +101,7 @@ export async function registerItemsRemote(items: Item[], idempotencyKey: string,
 const RemoteItemSchema = z.object({
   id: z.string(), decision: z.string().nullable(),
   simulation: z.object({ id: z.string(), start_date: z.string(), end_date_exclusive: z.string(), duration_days: z.number(), observation_dates: z.array(z.string()).optional() }),
-  purchase: z.object({ id: z.string(), purchased_on: z.string(), review_start: z.string(), review_end: z.string() }).nullable(),
+  purchase: z.object({ id: z.string(), purchased_on: z.string(), review_due_on: z.string().optional(), review_start: z.string(), review_end: z.string() }).nullable(),
 });
 export function applyRemoteItem(localId: string, response: unknown): Item {
   const row = RemoteItemSchema.parse(response);
@@ -110,7 +110,7 @@ export function applyRemoteItem(localId: string, response: unknown): Item {
   const next: Item = { ...item, registrationState: 'complete', remoteId: row.id, simulationId: row.simulation.id,
     status: row.decision === 'BUY' ? 'bought' : row.decision === 'GIVE_UP' ? 'abandoned' : 'simulating',
     simulation: { startAt: `${row.simulation.start_date}T00:00:00+09:00`, durationDays: row.simulation.duration_days, endDate: row.simulation.end_date_exclusive, observationDates: row.simulation.observation_dates },
-    ...(row.purchase ? { purchaseId: row.purchase.id, purchase: { boughtAt: `${row.purchase.purchased_on}T00:00:00+09:00`, reviewStart: row.purchase.review_start, reviewEnd: row.purchase.review_end } } : {}),
+    ...(row.purchase ? { purchaseId: row.purchase.id, purchase: { boughtAt: `${row.purchase.purchased_on}T00:00:00+09:00`, reviewDueOn: row.purchase.review_due_on, reviewStart: row.purchase.review_start, reviewEnd: row.purchase.review_end } } : {}),
   };
   update((s) => ({items: {...s.items, [localId]: next}}));
   return next;

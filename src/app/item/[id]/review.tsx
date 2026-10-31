@@ -35,7 +35,9 @@ export default function PostCheckScreen() {
         extra={copy.review.sinceBought(view.daysSinceBought)}
       />
 
-      <Button label={reflectionCopy.postAction} variant="secondary" onPress={()=>router.push('/check')}/>
+      {view.daysUntilDue > 0
+        ? <Text>{copy.review.notDue(view.daysUntilDue)}</Text>
+        : <Button label={reflectionCopy.postAction} variant="secondary" onPress={()=>router.push('/check')}/>}
       {item.purchase?.reviewStart && <Text tone="secondary">{reflectionCopy.window(item.purchase.reviewStart,item.purchase.reviewEnd)}</Text>}
       <Text tone="secondary">{reflectionCopy.postSwipeNotice}</Text>
       {review.saved && (

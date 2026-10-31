@@ -17,6 +17,7 @@ jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
 const input={name:'키보드',price:20000,category:'digital' as const,reasons:['need' as const],source:'manual' as const};
 const progress=(id:string)=>{const s=getState();return goalProgress({goal:s.goals[id],impulses:Object.values(s.impulses),items:Object.values(s.items),policy,budgets:s.budgets,expenses:Object.values(s.expenses),today:getToday()});};
 beforeEach(()=>{resetAllData();jest.resetAllMocks();});
+afterEach(()=>{jest.restoreAllMocks();});
 it('a next goal preserves the achieved shelf entry and does not reuse its savings', () => {
   const now = jest.spyOn(Date,'now').mockReturnValue(new Date('2026-11-01T03:00:00Z').getTime());
   try {
@@ -92,6 +93,8 @@ it('pending registrations are not notification work; dates and server IDs are ad
   expect(getState().items[i.id]).toMatchObject({remoteId:'server',simulationId:'simulation',registrationState:'complete',simulation:{durationDays:0}});
 });
 it('daily AI questions are frozen locally, response bodies leave the device only for the summary, and BUY/post swipes reuse server IDs',async()=>{
+  let actualNow = Date.now();
+  jest.spyOn(Date,'now').mockImplementation(()=>actualNow);
   const [i]=addItems([input]);const start=getToday();
   const server={id:'server',decision:null as string|null,purchase:null as unknown,simulation:{id:'simulation',duration_days:3,start_date:start,end_date_exclusive:addDays(start,3),observation_dates:[start,addDays(start,1),addDays(start,2)]}};
   applyRemoteItem(i.id,server);
@@ -102,7 +105,7 @@ it('daily AI questions are frozen locally, response bodies leave the device only
     await loadTodayReflections();await loadTodayReflections();
     await saveReflection(`q${day}`,{choice_code:code},code);
     expect(reflectionMetrics(getState().items[i.id]).expected).toBeNull();
-    shiftClock(1);
+    actualNow += 86400000;
   }
   expect(question).toHaveBeenCalledTimes(3);expect(JSON.stringify(question.mock.calls)).not.toContain('choice_code');
   (bobApi.simulations.summarize as jest.Mock).mockResolvedValue({result:{expected_used_days:null,answer_coverage:2/3,comparison_eligible:false,comparison_reason:'REFLECTION_NOT_USAGE'},ai_summary:{summary:'긍정·모름·부정 응답이 하나씩 있어요.',method:'AI'}});
@@ -110,6 +113,9 @@ it('daily AI questions are frozen locally, response bodies leave the device only
   expect(bobApi.simulations.summarize).toHaveBeenCalledTimes(1);expect(getState().items[i.id].summary).toMatchObject({expectedDays:null,eligible:false,reflectionCounts:{YES:1,UNSURE:1,NO:1}});
   (bobApi.items.putDecision as jest.Mock).mockResolvedValue({...server,decision:'BUY',purchase:{id:'purchase',purchased_on:getToday(),review_start:getToday(),review_end:addDays(getToday(),13)}});
   await decideItemRemote(i.id,'buy');expect(getState().items[i.id].purchaseId).toBe('purchase');
+  await loadTodayReflections();
+  expect(bobApi.purchases.localQuestion).not.toHaveBeenCalled();
+  actualNow += 14 * 86400000;
   (bobApi.purchases.localQuestion as jest.Mock).mockResolvedValue({id:'post-q',question_date:getToday(),template_code:'SW_POST_READY',template_version:'swipe-v2',wording_version:'short-v1',question:'키보드를 계획했던 용도로 활용할 준비가 되어 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
   await loadTodayReflections();
   await saveReflection('post-q',{choice_code:'UNSURE'},'잘 모르겠어요');
@@ -140,7 +146,7 @@ it('hold preserves observation gaps and respects the sale deadline',()=>{
   shiftClock(3);expect(()=>decideItem(i.id,'hold')).toThrow('판매 마감일');
 });
 it('post-purchase daily completion suppresses reminders without a duplicate usage survey',()=>{
-  const [i]=addItems([input]);const bought=decideItem(i.id,'buy');const day=getToday();
+  const [i]=addItems([input]);const bought=decideItem(i.id,'buy');const day=addDays(getToday(),14);
   const q={id:'post',itemId:i.id,phase:'post' as const,date:day,text:'질문',kind:'thought_of' as const,variant:'normal' as const,options:[]};
   const a={id:'answer',itemId:i.id,questionId:'post',date:day,at:new Date().toISOString(),optionId:'YES'};
   expect(hasNotificationWork([bought],[q],[],day)).toBe(true);

@@ -86,6 +86,7 @@ export const ItemSchema = z.object({
     text: z.string(), method: z.string(), expectedDays: z.number().nullable(),
     coverage: z.number(), eligible: z.boolean(), reason: z.string().nullable(),
     fingerprint: z.string(),
+    syncState: z.enum(['local', 'pending', 'synced', 'preview']).optional(),
     reflectionCounts: z.object({YES: z.number().int().nonnegative(), UNSURE: z.number().int().nonnegative(), NO: z.number().int().nonnegative()}).optional(),
   }).optional(),
   name: z.string().min(1),
@@ -113,7 +114,7 @@ export const ItemSchema = z.object({
   }),
   /** 구매/포기를 결정한 시각 */
   decidedAt: IsoString.optional(),
-  purchase: z.object({ boughtAt: IsoString, reviewStart: DateKeySchema.optional(), reviewEnd: DateKeySchema.optional() }).optional(),
+  purchase: z.object({ boughtAt: IsoString, reviewDueOn: DateKeySchema.optional(), reviewStart: DateKeySchema.optional(), reviewEnd: DateKeySchema.optional() }).optional(),
   savingGoalId: Id.optional(),
   review: PostPurchaseReviewSchema.optional(),
 });

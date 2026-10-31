@@ -563,6 +563,8 @@ export const reflectionCopy = {
   deadlineRequired: '오늘 이후의 할인 마감일을 선택해 주세요.',
   discountInvalid: '할인율은 0~100%, 금액과 배송 조건은 올바른 숫자로 입력해 주세요.',
   summaryFailed: '결과 요약을 불러오지 못했어요. 다시 시도해 주세요.',
+  summaryRemoteFailed: 'AI 요약을 불러오지 못해 저장된 답변으로 기본 요약을 보여드려요.',
+  summaryPreview: '시간 이동 중에는 기기의 답변으로 요약을 미리 보여드려요.',
   decisionFailed: '결정을 저장하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.',
   reviewFailed: '점검 결과를 저장하지 못했어요. 다시 선택해 주세요.',
   remaining: (n: number) => `남은 질문 ${n}개`,

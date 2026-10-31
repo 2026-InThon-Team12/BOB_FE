@@ -43,7 +43,7 @@ export function useSimulationResult(itemId: string | undefined) {
   const query = useQuery({queryKey:['reflection-summary',itemId,today], enabled: !!item && item.status === 'simulating' && today >= simulationEndDay(item),
     queryFn:async()=>{await summarizeItem(itemId!);return true;},retry:false,staleTime:Infinity});
   const summaryLoading=query.isFetching;
-  const error=decisionError ?? (query.isError ? reflectionCopy.summaryFailed : null);
+  const error=decisionError ?? (query.isError ? item?.summary ? reflectionCopy.summaryRemoteFailed : reflectionCopy.summaryFailed : null);
   const refresh=()=>{void query.refetch();};
   const [outcome, setOutcome] = useState<DecisionOutcome | null>(null);
 
