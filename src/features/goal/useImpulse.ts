@@ -21,7 +21,8 @@ export function useImpulse(initial: number | 'custom' = 1) {
   const today = useToday();
   const submitted = useRef(false);
   const [recorded, setRecorded] = useState(false);
-  const reset = () => { submitted.current = false; setRecorded(false); };
+  const [comparison, setComparison] = useState<{before: string | null; after: string | null; delay: number | null} | null>(null);
+  const reset = () => { submitted.current = false; setRecorded(false); setComparison(null); };
   const preset = picked === 'custom' ? null : policy.impulsePresets[picked];
   const label = preset ? preset.label : customName.trim();
   const amount = preset ? preset.amount : (customAmount ?? 0);
@@ -47,12 +48,13 @@ export function useImpulse(initial: number | 'custom' = 1) {
     recorded,
     workMinutes: Math.ceil(amount / policy.hourlyRate * 60),
     dailySaving: saving,
-    delay,
+    delay: comparison?.delay ?? delay,
     /** 참으면 / 사면 예상 달성일 */
-    etaIfResist: eta,
-    etaIfBuy: plan?.eta ?? null,
+    etaIfResist: comparison ? comparison.before : eta,
+    etaIfBuy: comparison ? comparison.after : plan?.eta ?? null,
     resist: (): ImpulseOutcome | null => {
       if (!ready || submitted.current) return null;
+      setComparison({before: eta, after: plan?.eta ?? null, delay});
       submitted.current = true; setRecorded(true);
       recordImpulse({ label, amount, decision: 'resisted' });
       const reached = false;
@@ -60,6 +62,7 @@ export function useImpulse(initial: number | 'custom' = 1) {
     },
     giveIn: (): ImpulseOutcome | null => {
       if (!ready || submitted.current) return null;
+      setComparison({before: eta, after: plan?.eta ?? null, delay});
       submitted.current = true; setRecorded(true);
       recordImpulse({ label, amount, decision: 'spent' });
       return { kind: 'spent' };
