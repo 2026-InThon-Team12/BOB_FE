@@ -149,6 +149,7 @@ export const QuestionSchema = z.object({
   phase: z.enum(['pre', 'post']).optional(),
   templateCode: z.string().optional(),
   templateVersion: z.string().optional(),
+  wordingVersion: z.string().optional(),
   answerSpec: z.record(z.string(), z.unknown()).optional(),
   reference: z.string().nullish(),
   generationMethod: z.string().optional(),

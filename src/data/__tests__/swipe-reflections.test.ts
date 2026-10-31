@@ -18,7 +18,7 @@ function setup(): Item {
   return applyRemoteItem(item.id,{id:'server',decision:null,purchase:null,simulation:{id:'simulation',duration_days:3,start_date:getToday(),end_date_exclusive:addDays(getToday(),3),observation_dates:[getToday(),addDays(getToday(),1),addDays(getToday(),2)]}});
 }
 function dto() {
-  return {id:'server-question',question_date:getToday(),template_code:'SW_PRE_NEED',template_version:'swipe-v2',question:'요가매트가 없어서 최근 스트레칭에 불편을 느낀 적이 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'};
+  return {id:'server-question',question_date:getToday(),template_code:'SW_PRE_NEED',template_version:'swipe-v2',wording_version:'short-v1',question:'요가매트가 없어서 최근 스트레칭에 불편을 느낀 적이 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'};
 }
 function samples(item: Item, history: Question[] = []) {
   return Array.from({length:100},(_,i)=>chooseSwipeQuestion(item,getToday(),history,()=>i/100));
@@ -34,7 +34,7 @@ it('selects all nine eligible intents and applies frequency, discount and recent
   const history = swipePreCatalog.slice(0,3).map((t,i)=>({...ordinary[0],templateCode:t.code,date:addDays(getToday(),-i-1)}));
   expect(samples(full,history).every(q=>!history.some(h=>h.templateCode===q.templateCode))).toBe(true);
   expect(ordinary.every(q=>isSwipeQuestion(q) && q.options.every(o=>!o.countsAsUse))).toBe(true);
-  expect(ordinary.find(q=>q.templateCode==='SW_PRE_CUSTOM')?.text).toContain('공간과 운동 시간');
+  expect(ordinary.find(q=>q.templateCode==='SW_PRE_CUSTOM')?.text).toContain('펼칠 공간');
 });
 it('freezes concurrent requests and stores version metadata across schema parsing',async()=>{
   setup();

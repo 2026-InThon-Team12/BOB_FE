@@ -98,7 +98,7 @@ it('daily AI questions are frozen locally, response bodies leave the device only
   const question=bobApi.simulations.localQuestion as jest.Mock;
   for(let day=0;day<3;day++) {
     const today=getToday();const code=['YES','UNSURE','NO'][day];
-    question.mockResolvedValueOnce({id:`q${day}`,question_date:today,template_code:'SW_PRE_NEED',template_version:'swipe-v2',question:'키보드가 없어서 최근 타이핑에 불편을 느낀 적이 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
+    question.mockResolvedValueOnce({id:`q${day}`,question_date:today,template_code:'SW_PRE_NEED',template_version:'swipe-v2',wording_version:'short-v1',question:'키보드가 없어서 최근 타이핑에 불편을 느낀 적이 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
     await loadTodayReflections();await loadTodayReflections();
     await saveReflection(`q${day}`,{choice_code:code},code);
     expect(reflectionMetrics(getState().items[i.id]).expected).toBeNull();
@@ -110,7 +110,7 @@ it('daily AI questions are frozen locally, response bodies leave the device only
   expect(bobApi.simulations.summarize).toHaveBeenCalledTimes(1);expect(getState().items[i.id].summary).toMatchObject({expectedDays:null,eligible:false,reflectionCounts:{YES:1,UNSURE:1,NO:1}});
   (bobApi.items.putDecision as jest.Mock).mockResolvedValue({...server,decision:'BUY',purchase:{id:'purchase',purchased_on:getToday(),review_start:getToday(),review_end:addDays(getToday(),13)}});
   await decideItemRemote(i.id,'buy');expect(getState().items[i.id].purchaseId).toBe('purchase');
-  (bobApi.purchases.localQuestion as jest.Mock).mockResolvedValue({id:'post-q',question_date:getToday(),template_code:'SW_POST_READY',template_version:'swipe-v2',question:'키보드를 계획했던 용도로 활용할 준비가 되어 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
+  (bobApi.purchases.localQuestion as jest.Mock).mockResolvedValue({id:'post-q',question_date:getToday(),template_code:'SW_POST_READY',template_version:'swipe-v2',wording_version:'short-v1',question:'키보드를 계획했던 용도로 활용할 준비가 되어 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
   await loadTodayReflections();
   await saveReflection('post-q',{choice_code:'UNSURE'},'잘 모르겠어요');
   expect(bobApi.purchases.localQuestion).toHaveBeenCalledWith('purchase',{recent_templates:[]});

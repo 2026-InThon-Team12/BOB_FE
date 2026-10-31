@@ -1,3 +1,4 @@
+import { SHORT_QUESTION_VERSION } from '@/constants/swipeQuestionCatalog';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadTodayReflections, saveReflection, useToday, useAnswers, useItems, useQuestions, type ReflectionAnswer } from '@/data';
@@ -14,7 +15,7 @@ export function useTodayCheck() {
   const selected=editQuestion && editItem ? {item:editItem,question:editQuestion,text:editQuestion.text} : live.entries[0];
   const [savingEntry,setSavingEntry] = useState<typeof selected | null>(null);
   const current=savingEntry ?? selected;
-  const query = useQuery({queryKey:['daily-reflections',today], queryFn:async()=>{await loadTodayReflections();return true;}, staleTime:0, retry:false});
+  const query = useQuery({queryKey:['daily-reflections',today,SHORT_QUESTION_VERSION], queryFn:async()=>{await loadTodayReflections();return true;}, staleTime:0, retry:false});
   const loading = query.isPending;
   const error = query.isError ? '질문을 불러오지 못했어요. 다시 시도해 주세요.' : null;
   const load = () => {void query.refetch();};

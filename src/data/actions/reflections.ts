@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { bobApi } from '@/api';
 import { env } from '@/config/env';
+import { SHORT_QUESTION_VERSION } from '@/constants/swipeQuestionCatalog';
 import { reflectionCopy } from '@/constants/copy';
 import { dateKeyOf } from '@/lib/date';
 import { chooseSwipeQuestion } from '@/lib/swipeQuestions';
@@ -18,7 +19,7 @@ import { isSwipeQuestion, reflectionCounts, validReflectionAnswer, type AnswerSp
 export type { AnswerSpec, ReflectionAnswer } from '@/lib/reflection';
 const questionDto = z.object({
   id: z.string(), question_date: z.string(), template_code: z.string(), question: z.string().min(1).max(300),
-  template_version: z.string(), answer_spec: z.record(z.string(), z.unknown()), reference_text: z.string().nullish(), generation_method: z.string(),
+  template_version: z.string(), wording_version: z.string().optional(), answer_spec: z.record(z.string(), z.unknown()), reference_text: z.string().nullish(), generation_method: z.string(),
   usage_window: z.object({start: z.string(), end: z.string()}).nullish(),
 });
 const flights = new Map<string, Promise<unknown>>();
@@ -45,7 +46,7 @@ export async function loadTodayReflections(): Promise<void> {
   await Promise.all(Object.values(getState().items).filter(i => reflectionDue(i,today)).map(item => single(`question:${item.id}:${today}`, async () => {
     const post = item.status === 'bought';
     const existing = Object.values(getState().questions).find(q => q.itemId === item.id && q.date === today && q.phase === (post ? 'post' : 'pre'));
-    if (existing && isSwipeQuestion(existing)) return;
+    if (existing && isSwipeQuestion(existing) && existing.wordingVersion === SHORT_QUESTION_VERSION) return;
     if (Object.values(getState().answers).some(a=>a.itemId===item.id && a.date===today && (getState().questions[a.questionId]?.phase ?? 'pre')===(post ? 'post':'pre'))) return;
     let question = fallbackQuestion(item, today);
     const remoteId = post ? item.purchaseId : item.simulationId;
@@ -56,7 +57,7 @@ export async function loadTodayReflections(): Promise<void> {
         const raw = await (post ? bobApi.purchases.localQuestion(remoteId, {recent_templates}) : bobApi.simulations.localQuestion(remoteId, {recent_templates}));
         const row = questionDto.parse(raw);
         if (row.question_date !== today || !isSwipeQuestion({templateVersion: row.template_version, answerSpec: row.answer_spec})) throw new Error(reflectionCopy.questionUnavailable);
-        question = {...question, id:row.id, text:row.question, templateCode:row.template_code, templateVersion:row.template_version, answerSpec:row.answer_spec,
+        question = {...question, id:row.id, text:row.question, templateCode:row.template_code, templateVersion:row.template_version, wordingVersion:row.wording_version, answerSpec:row.answer_spec,
           options:placeholderOptions(row.answer_spec as AnswerSpec), generationMethod:row.generation_method,
           reference:[row.reference_text, row.usage_window ? `${row.usage_window.start} ~ ${row.usage_window.end} (7일)` : null].filter(Boolean).join(' · ')};
       } catch { /* An explicit fixed-template fallback is displayed and frozen for the day. */ }
