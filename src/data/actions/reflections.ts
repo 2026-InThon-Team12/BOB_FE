@@ -13,7 +13,7 @@ import { requestDigest } from '@/lib/requestDigest';
 import type { DailyAnswer, Item, Question } from '@/types';
 import { getState, update } from '../store';
 import { getToday, getNowIso } from '../clock';
-import { decideItem, submitReview } from './items';
+import { decideItem } from './items';
 import { applyRemoteItem } from './remoteItems';
 
 import { isSwipeQuestion, reflectionCounts, validReflectionAnswer, type AnswerSpec, type ReflectionAnswer } from '@/lib/reflection';
@@ -31,8 +31,7 @@ function single<T>(key: string, run: () => Promise<T>): Promise<T> {
 export function reflectionDue(item: Item, today: string): boolean {
   if (item.registrationState === 'pending') return false;
   if (item.status === 'simulating') return simulationDayKeys(item).includes(today);
-  const due = reviewDueDay(item, policy);
-  return item.status === 'bought' && due !== null && today >= due;
+  return false;
 }
 export function fallbackQuestion(item: Item, today: string): Question {
   const post = item.status === 'bought';
@@ -155,9 +154,16 @@ export async function decideItemRemote(itemId: string, action: 'buy'|'abandon'|'
 export async function submitReviewRemote(itemId: string, bucket: string): Promise<void> {
   return single(`review:${itemId}`, async () => {
     const item = getState().items[itemId];
-    const frequency = {daily:'ALMOST_DAILY',often:'OFTEN',sometimes:'SOMETIMES',never:'NEVER'}[bucket];
-    if (!frequency) throw new Error('사용일수 구간을 선택해 주세요.');
-    if (item.purchaseId && env.aiMode === 'real') await bobApi.purchases.putReview(item.purchaseId,{frequency});
-    submitReview(itemId,{usageBucket:bucket});
+    const option = policy.reviewUsageBuckets.find(b => b.id === bucket);
+    const due = item && reviewDueDay(item,policy);
+    if (!option || !item || item.status !== 'bought' || !due || getToday() < due) throw new Error(reflectionCopy.answerInvalid);
+    if (item.review) return;
+    if (item.purchaseId && env.aiMode === 'real') await bobApi.purchases.putReview(item.purchaseId,{frequency:option.id});
+    const review = {usageBucket:option.id,usedDays:option.usedDays,at:getNowIso()};
+    try { await update(s=>({items:{...s.items,[itemId]:{...s.items[itemId],review}}})); }
+    catch (error) {
+      await Promise.resolve(update(s=>({items:{...s.items,[itemId]:{...s.items[itemId],review:undefined}}}))).catch(()=>{});
+      throw error;
+    }
   });
 }

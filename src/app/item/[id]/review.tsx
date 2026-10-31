@@ -2,12 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { BarRow, ItemSummary } from '@/components/feature';
 import { Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, TextLink } from '@/components/ui';
-import { CATEGORY_LABELS } from '@/constants/categories';
 import { copy, reflectionCopy } from '@/constants/copy';
 import { useReview } from '@/features/review/useReview';
 import { goBack } from '@/lib/navigation';
 
-/** New purchase reflections use the daily swipe flow; old usage records remain readable. */
+/** One usage review after the first two weeks; completed records stay readable. */
 export default function PostCheckScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const review = useReview(id);
@@ -37,12 +36,17 @@ export default function PostCheckScreen() {
 
       {view.daysUntilDue > 0
         ? <Text>{copy.review.notDue(view.daysUntilDue)}</Text>
-        : <Button label={reflectionCopy.postAction} variant="secondary" onPress={()=>router.push('/check')}/>}
+        : !review.saved && <Card><Stack gap={3}>
+          <Text variant="heading">{copy.review.question(item.name,view.window)}</Text>
+          <Text tone="secondary">{copy.review.pick}</Text>
+          {view.buckets.map(bucket=><Button key={bucket.id} label={copy.review.buckets[bucket.id].label} variant="secondary" disabled={review.busy} onPress={()=>{void review.submit(bucket.id);}}/>)}
+          {review.busy && <Text>{copy.review.saving}</Text>}
+          {review.error && <Text tone="warning">{review.error}</Text>}
+        </Stack></Card>}
       {item.purchase?.reviewStart && <Text tone="secondary">{reflectionCopy.window(item.purchase.reviewStart,item.purchase.reviewEnd)}</Text>}
-      <Text tone="secondary">{reflectionCopy.postSwipeNotice}</Text>
       {review.saved && (
         <>
-          <Text variant="label">{reflectionCopy.legacyReview}</Text>
+          <Text variant="label">{copy.review.done}</Text>
           <Text>{view.bucket ? copy.review.buckets[view.bucket.id]?.label : ''}</Text>
           {view.comparison && view.bucket && (
             <Card>
@@ -77,7 +81,7 @@ export default function PostCheckScreen() {
               <Row gap={2}>
                 <Icon name="ai" size="sm" tone="brand" />
                 <Stack flex={1}>
-                  <Text variant="label">{copy.review.reflected(CATEGORY_LABELS[item.category])}</Text>
+                  <Text variant="label">{copy.review.recorded}</Text>
                 </Stack>
                 <TextLink label={copy.review.toReport} onPress={() => router.dismissTo('/report')} />
               </Row>

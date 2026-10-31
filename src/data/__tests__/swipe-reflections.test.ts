@@ -96,7 +96,7 @@ it.each([undefined, 21])('keeps purchased cards and reminders closed until the d
   await loadTodayReflections();
   expect(bobApi.purchases.localQuestion).not.toHaveBeenCalled();
   await expect(saveReflection(q.id,{choice_code:'YES'},'예')).rejects.toThrow();
-  expect(reflectionDue(item,due)).toBe(true);
+  expect(reflectionDue(item,due)).toBe(false);
   expect(hasNotificationWork([item],[q],[],due)).toBe(true);
 });
 

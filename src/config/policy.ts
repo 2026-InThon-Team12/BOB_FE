@@ -26,8 +26,15 @@ export const policy = {
   /** #2 구매 후 실사용 점검 시점 (구매일로부터 일수) */
   reviewAfterDays: 14,
 
-  /** 구매 후 점검 답변 구간 (디자인 시안: 거의 매일 10일 이상 · 자주 5–9일 · 가끔 1–4일 · 0일) */
+  /** 구매 후 2주 사용일수 — 한 번만 응답 */
   reviewUsageBuckets: [
+    { id: 'DAYS_1_3', minDays: 1, maxDays: 3, usedDays: 2 },
+    { id: 'DAYS_4_7', minDays: 4, maxDays: 7, usedDays: 5.5 },
+    { id: 'DAYS_8_10', minDays: 8, maxDays: 10, usedDays: 9 },
+    { id: 'DAYS_11_14', minDays: 11, maxDays: 14, usedDays: 12.5 },
+  ] as UsageBucket[],
+  /** 기존 기록을 원래 구간으로 읽기 위한 정의 */
+  legacyReviewUsageBuckets: [
     { id: 'daily', minDays: 10, maxDays: 14, usedDays: 12 },
     { id: 'often', minDays: 5, maxDays: 9, usedDays: 7 },
     { id: 'sometimes', minDays: 1, maxDays: 4, usedDays: 2.5 },

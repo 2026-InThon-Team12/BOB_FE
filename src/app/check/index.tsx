@@ -75,6 +75,7 @@ export default function TodayCheckScreen() {
       )}
       {check.answered.map(a => <Button key={a.questionId} variant="ghost" label={a.readOnly ? reflectionCopy.viewAnswer(a.name,a.label) : reflectionCopy.edit(a.name, a.label)} onPress={() => check.edit(a.questionId)} />)}
       {check.awaitingDecision.map(item => <Button key={item.id} label={reflectionCopy.result(item.name)} onPress={() => router.push({ pathname: '/item/[id]/result', params: { id: item.id } })} />)}
+      {check.awaitingReview.map(item => <Button key={item.id} label={copy.main.reviewTitle(item.name)} onPress={() => router.push({ pathname: '/item/[id]/review', params: { id: item.id } })} />)}
       <Button label={reflectionCopy.home} variant="ghost" onPress={() => router.replace('/')} />
     </Screen>
   );

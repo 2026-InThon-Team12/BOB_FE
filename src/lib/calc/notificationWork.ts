@@ -9,6 +9,6 @@ export function hasNotificationWork(items:Item[], questions:Question[], answers:
     const answered = answers.some(a=>a.itemId===i.id && a.date===day && questions.some(q=>q.id===a.questionId && (q.phase ?? 'pre')===phase));
     if (i.status === 'simulating') return day >= simulationEndDay(i) || (simulationDayKeys(i).includes(day) && !answered);
     const due = reviewDueDay(i, policy);
-    return due !== null && day >= due && !answered;
+    return due !== null && day >= due && !i.review;
   });
 }

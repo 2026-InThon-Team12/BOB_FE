@@ -1,4 +1,4 @@
-import { setMonthlyBudget, addItems, createGoal, decideItem, getToday, recordImpulse, removeImpulse, resetAllData, shiftClock, loadTodayReflections, saveReflection, summarizeItem, decideItemRemote } from '@/data';
+import { setMonthlyBudget, addItems, createGoal, decideItem, getToday, recordImpulse, removeImpulse, resetAllData, shiftClock, loadTodayReflections, saveReflection, summarizeItem, decideItemRemote, submitReviewRemote } from '@/data';
 import { getState, update } from '@/data/store';
 import { applyRemoteItem } from '@/data/actions/remoteItems';
 import { simulationDayNumber } from '@/lib/calc/itemMachine';
@@ -92,7 +92,7 @@ it('pending registrations are not notification work; dates and server IDs are ad
   applyRemoteItem(i.id,{id:'server',decision:null,purchase:null,simulation:{id:'simulation',duration_days:0,start_date:today,end_date_exclusive:today,observation_dates:[]}});
   expect(getState().items[i.id]).toMatchObject({remoteId:'server',simulationId:'simulation',registrationState:'complete',simulation:{durationDays:0}});
 });
-it('daily AI questions are frozen locally, response bodies leave the device only for the summary, and BUY/post swipes reuse server IDs',async()=>{
+it('daily AI questions are frozen locally, response bodies leave the device only for the summary, and BUY/review reuse server IDs',async()=>{
   let actualNow = Date.now();
   jest.spyOn(Date,'now').mockImplementation(()=>actualNow);
   const [i]=addItems([input]);const start=getToday();
@@ -116,11 +116,21 @@ it('daily AI questions are frozen locally, response bodies leave the device only
   await loadTodayReflections();
   expect(bobApi.purchases.localQuestion).not.toHaveBeenCalled();
   actualNow += 14 * 86400000;
-  (bobApi.purchases.localQuestion as jest.Mock).mockResolvedValue({id:'post-q',question_date:getToday(),template_code:'SW_POST_READY',template_version:'swipe-v2',wording_version:'short-v1',question:'키보드를 계획했던 용도로 활용할 준비가 되어 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
   await loadTodayReflections();
-  await saveReflection('post-q',{choice_code:'UNSURE'},'잘 모르겠어요');
-  expect(bobApi.purchases.localQuestion).toHaveBeenCalledWith('purchase',{recent_templates:[]});
-  expect(bobApi.purchases.putReview).not.toHaveBeenCalled();
+  expect(bobApi.purchases.localQuestion).not.toHaveBeenCalled();
+  expect(hasNotificationWork([getState().items[i.id]],[],[],getToday())).toBe(true);
+  (bobApi.purchases.putReview as jest.Mock).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({});
+  await expect(submitReviewRemote(i.id,'DAYS_4_7')).rejects.toThrow('offline');
+  expect(getState().items[i.id].review).toBeUndefined();
+  await Promise.all([submitReviewRemote(i.id,'DAYS_4_7'),submitReviewRemote(i.id,'DAYS_4_7')]);
+  expect(bobApi.purchases.putReview).toHaveBeenCalledTimes(2);
+  expect(bobApi.purchases.putReview).toHaveBeenLastCalledWith('purchase',{frequency:'DAYS_4_7'});
+  expect(getState().items[i.id].review).toMatchObject({usageBucket:'DAYS_4_7',usedDays:5.5});
+  await submitReviewRemote(i.id,'DAYS_1_3');
+  expect(bobApi.purchases.putReview).toHaveBeenCalledTimes(2);
+  actualNow += 30 * 86400000;
+  expect(hasNotificationWork([getState().items[i.id]],[],[],getToday())).toBe(false);
+
 });
 it('historical answers remain readable and cannot be reinterpreted as new swipe answers',async()=>{
   const [i]=addItems([input]);const q={id:'q',itemId:i.id,date:getToday(),phase:'pre' as const,templateCode:'CURRENT_MOOD',text:'기분',kind:'thought_of' as const,variant:'normal' as const,options:[{id:'HAPPY',label:'좋음',countsAsUse:false},{id:'UNSURE',label:'모름',countsAsUse:false}],answerSpec:{type:'CHOICE',options:[{code:'HAPPY',label:'좋음'},{code:'UNSURE',label:'모름'}]}};
@@ -145,12 +155,9 @@ it('hold preserves observation gaps and respects the sale deadline',()=>{
   expect(simulationDayNumber(held,addDays(getToday(),1))).toBe(4);
   shiftClock(3);expect(()=>decideItem(i.id,'hold')).toThrow('판매 마감일');
 });
-it('post-purchase daily completion suppresses reminders without a duplicate usage survey',()=>{
+it('old post-purchase swipes cannot suppress the one-time usage review reminder',()=>{
   const [i]=addItems([input]);const bought=decideItem(i.id,'buy');const day=addDays(getToday(),14);
   const q={id:'post',itemId:i.id,phase:'post' as const,date:day,text:'질문',kind:'thought_of' as const,variant:'normal' as const,options:[]};
   const a={id:'answer',itemId:i.id,questionId:'post',date:day,at:new Date().toISOString(),optionId:'YES'};
-  expect(hasNotificationWork([bought],[q],[],day)).toBe(true);
-  expect(hasNotificationWork([bought],[q],[a],day)).toBe(false);
-  const later=addDays(day,14);
-  expect(hasNotificationWork([bought],[q],[{...a,date:later}],later)).toBe(false);
+  expect(hasNotificationWork([bought],[q],[a],day)).toBe(true);
 });

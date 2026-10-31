@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 
 import { policy } from '@/config/policy';
 import { CATEGORY_LABELS } from '@/constants/categories';
-import { useAnswers, useItems, useQuestions, useToday } from '@/data';
+import { useItems, useToday } from '@/data';
 import { derivePhase, simulationDayNumber } from '@/lib/calc';
 import type { Item } from '@/types';
 
@@ -23,7 +23,6 @@ export function useHome() {
   const items = useItems();
   const today = useToday();
   const questions = useTodayQuestions();
-  const records = useQuestions(), answers = useAnswers();
   const goal = useGoalOverview();
 
   const { simulating, reviewDue } = useMemo(() => {
@@ -31,8 +30,7 @@ export function useHome() {
     let review: Item | undefined;
     for (const item of items) {
       const phase = derivePhase(item, today, policy);
-      const answeredPost = answers.some(a => a.itemId === item.id && a.date === today && records.some(q => q.id === a.questionId && q.phase === 'post'));
-      if (phase === 'awaitingReview' && !review && !answeredPost) review = item;
+      if (phase === 'awaitingReview' && !review) review = item;
       if (phase !== 'simulating' && phase !== 'awaitingDecision') continue;
       const total = item.simulation.durationDays;
       const day = Math.min(total, Math.max(0, simulationDayNumber(item, today)));
@@ -48,7 +46,7 @@ export function useHome() {
     // 결과 도착이 먼저, 그다음 먼저 등록한 순
     rows.sort((a, b) => Number(b.resultReady) - Number(a.resultReady) || a.item.createdAt.localeCompare(b.item.createdAt));
     return { simulating: rows, reviewDue: review };
-  }, [items, today, answers, records]);
+  }, [items, today]);
 
   return {
     /** 오늘 답할 품목 수 (0이면 오늘 답변 완료 또는 시뮬레이션 없음) */

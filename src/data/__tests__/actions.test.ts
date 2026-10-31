@@ -88,10 +88,9 @@ describe('결정 흐름', () => {
     expectCode(() => submitReview(item.id, { usageBucket: 'sometimes' }), 'invalid_transition');
     shiftClock(14);
     expectCode(() => submitReview(item.id, { usageBucket: 'nope' }), 'invalid_input');
-    const reviewed = submitReview(item.id, { usageBucket: 'sometimes' });
-    expect(reviewed.review).toMatchObject({ usageBucket: 'sometimes', usedDays: 2.5 });
-    // 점검 답은 고칠 수 있다
-    expect(submitReview(item.id, { usageBucket: 'daily' }).review).toMatchObject({ usageBucket: 'daily', usedDays: 12 });
+    const reviewed = submitReview(item.id, { usageBucket: 'DAYS_1_3' });
+    expect(reviewed.review).toMatchObject({ usageBucket: 'DAYS_1_3', usedDays: 2 });
+    expectCode(() => submitReview(item.id, { usageBucket: 'DAYS_11_14' }), 'invalid_transition');
   });
 
   it('보류 = 7일 연장, 지금까지의 답은 유지하고 다시 질문을 받는다', () => {

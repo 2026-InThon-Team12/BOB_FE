@@ -110,7 +110,7 @@ export function buildDemoState(now: Date): DataState {
         ? {
             review: {
               usageBucket: spec.review.usageBucket,
-              usedDays: policy.reviewUsageBuckets.find((b) => b.id === spec.review!.usageBucket)!.usedDays,
+              usedDays: [...policy.reviewUsageBuckets,...policy.legacyReviewUsageBuckets].find((b) => b.id === spec.review!.usageBucket)!.usedDays,
               at: at(spec.review.at),
             },
           }

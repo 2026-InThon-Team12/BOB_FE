@@ -53,8 +53,7 @@ const ACTIONS: Record<ItemPhase, ItemAction[]> = {
   awaitingDecision: ['buy', 'abandon', 'hold'],
   bought: [],
   awaitingReview: ['review'],
-  // 점검 답은 고칠 수 있다 (명세서 4.7: 선택 즉시 갱신)
-  reviewed: ['review'],
+  reviewed: [],
   abandoned: [],
 };
 

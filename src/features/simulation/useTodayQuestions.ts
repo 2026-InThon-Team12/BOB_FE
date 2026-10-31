@@ -35,12 +35,14 @@ export function useTodayQuestions() {
     const tendencies = categoryTendency({ items, questions, answers, policy });
     const entries: TodayEntry[] = [];
     const awaitingDecision: Item[] = [];
+    const awaitingReview: Item[] = [];
     let dueCount = 0;
 
     // 먼저 등록한 물건부터 묻는다
     for (const item of [...items].reverse()) {
       const phase = derivePhase(item, today, policy);
       if (phase === 'awaitingDecision') awaitingDecision.push(item);
+      if (phase === 'awaitingReview') awaitingReview.push(item);
       if (!reflectionDue(item, today)) continue;
       const itemQuestions = questions.filter((q) => q.itemId === item.id);
       const daily = itemQuestions.find(q => q.date === today && q.phase === (item.status === 'bought' ? 'post' : 'pre'));
@@ -60,6 +62,6 @@ export function useTodayQuestions() {
         emphasis: t && t.samples >= policy.emphasis.minSamples && t.ratio >= policy.emphasis.overPredictionRatio ? {ratio:t.ratio} : null,
       });
     }
-    return { entries, awaitingDecision, dueCount };
+    return { entries, awaitingDecision, awaitingReview, dueCount };
   }, [items, questions, answers, today]);
 }

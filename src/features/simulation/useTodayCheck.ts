@@ -9,8 +9,8 @@ export function useTodayCheck() {
   const today = useToday();
   const answers = useAnswers(), items=useItems(), questions=useQuestions();
   const [editing,setEditing] = useState<string|null>(null);
-  const answered=answers.filter(a=>a.date===today && !!a.value).flatMap(a=>{const item=items.find(i=>i.id===a.itemId);const q=questions.find(q=>q.id===a.questionId);return item ? [{itemId:item.id,name:item.name,label:a.label ?? '',questionId:a.questionId,readOnly:!q || !isSwipeQuestion(q)}]:[];});
-  const editQuestion=questions.find(q=>q.id===editing && q.date===today);
+  const answered=answers.filter(a=>a.date===today && !!a.value).flatMap(a=>{const item=items.find(i=>i.id===a.itemId);const q=questions.find(q=>q.id===a.questionId);return item && q?.phase !== 'post' ? [{itemId:item.id,name:item.name,label:a.label ?? '',questionId:a.questionId,readOnly:!q || !isSwipeQuestion(q)}]:[];});
+  const editQuestion=questions.find(q=>q.id===editing && q.date===today && q.phase !== 'post');
   const editItem=items.find(i=>i.id===editQuestion?.itemId);
   const selected=editQuestion && editItem ? {item:editItem,question:editQuestion,text:editQuestion.text} : live.entries[0];
   const [savingEntry,setSavingEntry] = useState<typeof selected | null>(null);

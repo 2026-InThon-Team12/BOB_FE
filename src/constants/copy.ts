@@ -456,7 +456,7 @@ export const copy = {
     title: '구매 후 점검',
     sinceBought: (days: number) => `산 지 ${days}일`,
     question: (name: string, days: number) => `지난 ${days === 14 ? '2주' : `${days}일`} 동안
-${josa(name, '을/를')} 며칠 사용했나요?`,
+${name}을(를) 며칠 사용했나요?`,
     body: '막 샀을 땐 괜히 자주 쓰게 되잖아요. 들뜬 기분이 지나간 지금 물어볼게요.',
     compareTitle: '예측 vs 실제',
     predicted: '사기 전 예측',
@@ -475,8 +475,14 @@ ${josa(name, '을/를')} 며칠 사용했나요?`,
     toReport: '리포트',
     notDue: (days: number) => `${days}일 뒤에 물어볼게요. 지금은 실컷 써 보세요.`,
     done: '점검을 마쳤어요',
+    recorded: '사용 기록을 저장했어요. 이 물건은 다시 묻지 않아요.',
+    saving: '기록하고 있어요…',
     /** 구매 후 점검 답변 구간 (id는 policy.reviewUsageBuckets) */
     buckets: {
+      DAYS_1_3: { label: '1–3일', range: '1–3일' },
+      DAYS_4_7: { label: '4–7일', range: '4–7일' },
+      DAYS_8_10: { label: '8–10일', range: '8–10일' },
+      DAYS_11_14: { label: '11–14일', range: '11–14일' },
       daily: { label: '거의 매일', range: '10일 이상' },
       often: { label: '자주', range: '5–9일' },
       sometimes: { label: '가끔', range: '1–4일' },
