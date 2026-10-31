@@ -22,6 +22,7 @@ const useStyles = makeStyles((t) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  neutralIcon: { backgroundColor: t.color.bg.subtle },
 }));
 
 /** 시안 "무엇을 사고 싶나요?"의 등록 방법 카드 */
@@ -29,9 +30,9 @@ export function MethodOption({ icon, title, body, badge, highlighted, onPress }:
   const styles = useStyles();
   return (
     <Card selected={highlighted} onPress={onPress} accessibilityLabel={title}>
-      <Row gap={4} align="flex-start">
-        <View style={styles.iconBox}>
-          <Icon name={icon} tone="brand" />
+      <Row gap={3.5} align="flex-start">
+        <View style={[styles.iconBox, !highlighted && styles.neutralIcon]}>
+          <Icon name={icon} tone={highlighted ? 'brand' : 'primary'} />
         </View>
         <Stack flex={1} gap={1}>
           <Row gap={2}>

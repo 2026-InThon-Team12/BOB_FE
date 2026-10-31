@@ -87,18 +87,32 @@ const lightColor = {
     onSolidSubtle: 'rgba(255,255,255,0.18)',
   },
   /** "Bye" 버튼, 함정·주의 안내 */
-  warning: { solid: palette.orange600, pressed: palette.orange700, subtle: palette.orange50, onSubtle: palette.orange800 },
+  warning: {
+    solid: palette.orange600,
+    pressed: palette.orange700,
+    subtle: palette.orange50,
+    onSubtle: palette.orange800,
+  },
   success: { solid: palette.green500, subtle: palette.green50 },
   danger: { solid: palette.orange600, subtle: palette.orange50 },
   /** 필수 경고 (명세서: 사용자 행동을 막는 경고에만 — "같은 쇼핑몰" 안내) */
-  alert: { text: palette.red700, subtle: palette.red50, border: palette.red200 },
+  alert: {
+    text: palette.red700,
+    subtle: palette.red50,
+    border: palette.red200,
+  },
   switchOff: palette.switchOff,
   /** 일러스트(동전·선물·색종이) 전용 */
   gold: palette.gold,
   /** 스와이프 "딱히 없었어요" 오버레이 (명세서 #3A404C) */
   swipeNo: palette.gray700,
   /** 목표 진열장 */
-  shelf: { bg: palette.shelfBg, wall: palette.shelfWall, plank: palette.shelfPlank, stamp: palette.shelfStamp },
+  shelf: {
+    bg: palette.shelfBg,
+    wall: palette.shelfWall,
+    plank: palette.shelfPlank,
+    stamp: palette.shelfStamp,
+  },
   track: palette.gray150,
   /** 예측 vs 실제 막대의 "예측" */
   predicted: palette.gray300,
@@ -144,14 +158,28 @@ const darkColor: ColorTokens = {
     onSolid: palette.white,
     onSolidSubtle: 'rgba(255,255,255,0.18)',
   },
-  warning: { solid: palette.orange600, pressed: palette.orange700, subtle: palette.orange950, onSubtle: palette.orange200 },
+  warning: {
+    solid: palette.orange600,
+    pressed: palette.orange700,
+    subtle: palette.orange950,
+    onSubtle: palette.orange200,
+  },
   success: { solid: palette.green500, subtle: palette.green950 },
   danger: { solid: palette.orange600, subtle: palette.orange950 },
-  alert: { text: palette.red200, subtle: palette.red700, border: palette.red700 },
+  alert: {
+    text: palette.red200,
+    subtle: palette.red700,
+    border: palette.red700,
+  },
   switchOff: palette.gray600,
   gold: palette.gold,
   swipeNo: palette.gray600,
-  shelf: { bg: palette.gray700, wall: palette.gray600, plank: palette.gray500, stamp: palette.gray950 },
+  shelf: {
+    bg: palette.gray700,
+    wall: palette.gray600,
+    plank: palette.gray500,
+    stamp: palette.gray950,
+  },
   track: palette.gray700,
   predicted: palette.gray500,
   overlay: 'rgba(0,0,0,0.6)',
@@ -163,8 +191,11 @@ export const space = {
   0: 0,
   1: 4,
   2: 8,
+  2.5: 10,
   3: 12,
+  3.5: 14,
   4: 16,
+  4.5: 18,
   5: 20,
   6: 24,
   8: 32,
@@ -177,6 +208,8 @@ export type SpaceKey = keyof typeof space;
 export const radius = {
   sm: 8,
   md: 12,
+  input: 14,
+  review: 18,
   lg: 16,
   xl: 20,
   xxl: 28,
@@ -196,6 +229,10 @@ export const font = {
 
 /** 시안 글자 크기: 44·36(큰 숫자) / 22(화면 제목) / 17(카드 제목) / 15(본문) / 13·12(보조) */
 export const typography = {
+  htmlLogo: { fontSize: 24, lineHeight: 32, fontWeight: '700' },
+  htmlHero: { fontSize: 21, lineHeight: 31, fontWeight: '700' },
+  htmlBody: { fontSize: 14, lineHeight: 22, fontWeight: '400' },
+  htmlTab: { fontSize: 11, lineHeight: 16, fontWeight: '500' },
   hero: { fontSize: 36, lineHeight: 44, fontWeight: '700' },
   display: { fontSize: 30, lineHeight: 38, fontWeight: '700' },
   title: { fontSize: 22, lineHeight: 30, fontWeight: '700' },
@@ -235,6 +272,26 @@ export const elevation = {
 } as const;
 
 export const layout = {
+  /** Measurements taken from BoB_handoff/prototype (390px reference width). */
+  html: {
+    webStatusInset: 44,
+    top: 10,
+    header: 48,
+    side: 44,
+    tab: 50,
+    tabWidth: 72,
+    tabBottom: 28,
+    footerBottom: 34,
+    heroButton: 50,
+    button: 54,
+    chip: 34,
+    rowPadding: 14,
+    line: 1,
+    sheetTop: 24,
+    receiptWidth: 52,
+    receiptHeight: 72,
+    questionHeight: 480,
+  },
   /** 웹 데모 PhoneFrame 폭 / 높이 (시안 기준 390 × 844) */
   frameWidth: 390,
   frameMaxHeight: 844,

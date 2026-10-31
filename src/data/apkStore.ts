@@ -125,11 +125,15 @@ export const apkActions = {
   dismiss() {
     set({ error: '', notice: '' });
   },
+  clearNotice() {
+    set({ notice: '' });
+  },
   async refresh(page: string) {
     return apkActions.run(async () => {
       switch (page) {
         case 'home':
         case 'goal':
+        case 'goalDone':
           await loadHome();
           break;
         case 'today':
@@ -189,6 +193,14 @@ export const apkActions = {
   async removeDraft(index: number) {
     return apkActions.run(async () => {
       await repo.setDrafts(repo.local.drafts.filter((_, i) => i !== index));
+      set({ discount: {}, discountRule: undefined });
+    });
+  },
+  async selectDrafts(indices: number[]) {
+    return apkActions.run(async () => {
+      const selected = repo.local.drafts.filter((_, i) => indices.includes(i));
+      if (!selected.length) throw new Error(c.invalidDraft);
+      await repo.setDrafts(selected);
       set({ discount: {}, discountRule: undefined });
     });
   },

@@ -1,6 +1,6 @@
 # BOB_FE — apklike
 
-BOB_ANDROID의 동작을 기준으로 Expo 앱의 데이터와 화면 흐름을 맞추는 브랜치입니다.
+UI는 `BoB_handoff/prototype/*.html`, 기능은 `BOB_ANDROID` APK의 API·저장 동작을 기준으로 구현하는 브랜치입니다.
 원래 `feat/frontend-mvp` 및 `fix/expo-cart-upload-review` 브랜치는 변경하지 않습니다.
 
 ## 실행
@@ -43,6 +43,6 @@ API를 테스트 응답으로 대체하므로 실제 서버 기록을 만들지 
 
 Android Expo Go 실기기에서 모든 기능을 확인한 버전은 아직 아닙니다.
 특히 Expo Go의 원격 푸시 제한 및 APK의 백그라운드 알림 처리 차이는 [인계 문서](docs/apklike-parity.md)를 확인하세요.
-Kotlin과 같은 픽셀 배치가 아니라 Expo 컴포넌트로 동일한 업무 흐름을 구현합니다.
+화면별 HTML 대응과 서버 응답에 따른 표시 규칙은 [UI 기준](docs/html-ui.md)에 정리했습니다.
 
-브랜치는 로컬에만 저장합니다. 요청 없이 GitHub에 push하지 않습니다.
+이번 UI 수정은 로컬 `apklike`에 저장합니다. 요청 없이 GitHub에 push하지 않습니다.

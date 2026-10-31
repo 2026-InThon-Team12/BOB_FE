@@ -53,7 +53,13 @@ it('discount compares needed flags, then registers the reviewed selection', asyn
     reasons: ['EXTRA_DISCOUNT'],
     needed,
   }));
-  const rule = { minimum_amount: 2000, unit: 'PCT', value: 10, shipping_fee: 0, free_shipping_enabled: false };
+  const rule = {
+    minimum_amount: 2000,
+    unit: 'PCT',
+    value: 10,
+    shipping_fee: 0,
+    free_shipping_enabled: false,
+  };
   await apkActions.discount(rule);
   expect(request).toHaveBeenCalledWith('POST', '/discount-previews', {
     rule,
@@ -93,4 +99,19 @@ it('keeps every character of rapid draft edits while persistence is pending', as
     apkActions.draft(0, { name: '키보드' }),
   ]);
   expect(useApkState.getState().drafts[0].name).toBe('키보드');
+});
+
+it('selecting screenshot drafts only changes pending drafts and preserves registered items', async () => {
+  const saved = { id: 'already-registered', name: 'first photo' };
+  useApkState.setState({ home: { simulations: [saved] }, history: [saved] });
+  repo.local.drafts = [newDraft({ name: 'keep', price: 1000 }), newDraft({ name: 'exclude', price: 2000 })];
+  const request = jest.spyOn(repo, 'request');
+  expect(await apkActions.selectDrafts([0])).toBe(true);
+  expect(repo.local.drafts.map((d) => d.name)).toEqual(['keep']);
+  expect(repo.persist).toHaveBeenCalled();
+  expect(useApkState.getState().home.simulations).toEqual([saved]);
+  expect(useApkState.getState().history).toEqual([saved]);
+  expect(request).not.toHaveBeenCalled();
+  expect(await apkActions.selectDrafts([])).toBe(false);
+  expect(repo.local.drafts.map((d) => d.name)).toEqual(['keep']);
 });

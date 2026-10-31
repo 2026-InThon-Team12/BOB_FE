@@ -4,7 +4,7 @@
 
 ## 실행
 
-이 브랜치는 로컬에만 생성하며 자동 push하지 않는다. GitHub에서 fetch하려면 별도로 이 브랜치를 push해야 한다.
+기존 `apklike`는 GitHub에 있으며, 이번 HTML UI 수정은 로컬에만 적용한다. 최신 UI를 다른 사람이 받으려면 별도로 push해야 한다.
 
 ```sh
 git switch apklike
@@ -31,7 +31,7 @@ npx expo start --go --clear
 | 지갑·리포트 | 월별 예산, 수동 지출 등록·수정·삭제, 서버 월별 리포트 |
 | 뒤로 이동 | APK의 페이지별 목적지 매핑. 이동해도 영속 초안·서버 물품은 삭제하지 않음 |
 
-화면은 Expo UI 컴포넌트로 구현했다. Kotlin Compose와 픽셀 단위로 같은 화면을 만든 것은 아니다.
+화면 디자인의 기준은 `BoB_handoff/prototype/*.html`이다. APK의 Kotlin UI를 복제하지 않는다. HTML의 헤더, 카드, 색상, 간격, 하단 탭과 고정 버튼을 React Native로 구현하며, APK의 서버 데이터·등록·계정·질문 저장 흐름에 연결한다. 자세한 대응은 [HTML UI 기준](html-ui.md)을 참고한다.
 
 ## 저장과 호환
 

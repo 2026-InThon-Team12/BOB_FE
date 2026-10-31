@@ -8,7 +8,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleDot,
+  Target,
+  CreditCard,
   CircleQuestionMark,
   Clock,
   House,
@@ -23,7 +24,6 @@ import {
   Sparkles,
   TriangleAlert,
   Truck,
-  Wallet,
   Wrench,
   X,
 } from 'lucide-react-native';
@@ -37,9 +37,9 @@ import { useTheme, type Theme } from '@/theme';
 const registry = {
   // 탭 (시안: 홈 · 목표 · 리포트 · 지갑)
   home: House,
-  goal: CircleDot,
+  goal: Target,
   report: ChartColumn,
-  wallet: Wallet,
+  wallet: CreditCard,
   // 동작
   add: Plus,
   back: ChevronLeft,
@@ -87,10 +87,6 @@ export function Icon({ name, size = 'md', tone = 'primary', color }: Props) {
   const theme = useTheme();
   const Component = registry[name];
   return (
-    <Component
-      size={theme.layout.iconSize[size]}
-      color={color ?? theme.color.text[tone]}
-      strokeWidth={2}
-    />
+    <Component size={theme.layout.iconSize[size]} color={color ?? theme.color.text[tone]} strokeWidth={1.8} />
   );
 }

@@ -13,8 +13,8 @@ import { Text, type TextTone } from './Text';
  * - onBrand: 파란 카드 위 흰 버튼 ("1분 만에 답하기")
  * - ghost: 글자만 ("그래도 살래요", "다음 목표 정하기")
  */
-export type ButtonVariant = 'primary' | 'bye' | 'secondary' | 'onBrand' | 'ghost' | 'danger';
-export type ButtonSize = 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'bye' | 'secondary' | 'onBrand' | 'ghost' | 'danger' | 'dashed';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 type Props = {
   label: string;
@@ -33,16 +33,32 @@ type Props = {
 const variantColors = (t: Theme, variant: ButtonVariant, pressed: boolean) => {
   switch (variant) {
     case 'primary':
-      return { bg: pressed ? t.color.brand.pressed : t.color.brand.solid, border: 'transparent' };
+      return {
+        bg: pressed ? t.color.brand.pressed : t.color.brand.solid,
+        border: 'transparent',
+      };
     case 'bye':
     case 'danger':
-      return { bg: pressed ? t.color.warning.pressed : t.color.warning.solid, border: 'transparent' };
+      return {
+        bg: pressed ? t.color.warning.pressed : t.color.warning.solid,
+        border: 'transparent',
+      };
     case 'secondary':
-      return { bg: pressed ? t.color.bg.subtle : t.color.bg.surface, border: t.color.border.default };
+    case 'dashed':
+      return {
+        bg: pressed ? t.color.bg.subtle : t.color.bg.surface,
+        border: t.color.border.default,
+      };
     case 'onBrand':
-      return { bg: pressed ? t.color.brand.subtle : t.color.bg.surface, border: 'transparent' };
+      return {
+        bg: pressed ? t.color.brand.subtle : t.color.bg.surface,
+        border: 'transparent',
+      };
     case 'ghost':
-      return { bg: pressed ? t.color.bg.subtle : 'transparent', border: 'transparent' };
+      return {
+        bg: pressed ? t.color.bg.subtle : 'transparent',
+        border: 'transparent',
+      };
   }
 };
 
@@ -53,6 +69,7 @@ const labelTone: Record<ButtonVariant, TextTone> = {
   secondary: 'primary',
   onBrand: 'brand',
   ghost: 'secondary',
+  dashed: 'secondary',
 };
 
 const useStyles = makeStyles((t) => ({
@@ -63,7 +80,9 @@ const useStyles = makeStyles((t) => ({
     borderWidth: 1,
   },
   md: { minHeight: 48, paddingHorizontal: t.space[4] },
-  lg: { minHeight: 56, paddingHorizontal: t.space[5] },
+  lg: { minHeight: t.layout.html.button, paddingHorizontal: t.space[5] },
+  sm: { minHeight: t.layout.html.chip, paddingHorizontal: t.space[2] },
+  dashed: { borderStyle: 'dashed' },
   twoLine: { minHeight: 64, paddingVertical: t.space[2] },
   content: { flexDirection: 'row', alignItems: 'center', gap: t.space[2] },
   fullWidth: { alignSelf: 'stretch' },
@@ -98,6 +117,7 @@ export function Button({
       style={({ pressed }) => {
         const c = variantColors(theme, variant, pressed);
         return [
+          variant === 'dashed' && styles.dashed,
           styles.base,
           styles[size],
           sublabel && styles.twoLine,
@@ -113,7 +133,10 @@ export function Button({
         <>
           <View style={styles.content}>
             {icon && <Icon name={icon} size="sm" tone={tone} />}
-            <Text variant={size === 'lg' || sublabel ? 'heading' : 'bodyStrong'} tone={tone}>
+            <Text
+              variant={size === 'sm' ? 'label' : size === 'lg' || sublabel ? 'heading' : 'bodyStrong'}
+              tone={tone}
+            >
               {label}
             </Text>
           </View>
