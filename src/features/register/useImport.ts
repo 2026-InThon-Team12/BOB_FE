@@ -18,11 +18,13 @@ export function useScreenshotImport() {
   const pickAndAnalyze = async (): Promise<ImportResult> => {
     const picked = await pickImage();
     if (!picked) return 'canceled';
+    // 새 분석을 시작하면 이전 사진의 결과는 등록할 수 없도록 즉시 비운다.
+    flow.setRows([]);
     setImage(picked);
     try {
-      const drafts = await mutation.mutateAsync(picked);
-      if (drafts.length === 0) return 'failed';
-      flow.setRows(drafts.map(draftFromAi));
+      const analysis = await mutation.mutateAsync(picked);
+      if (analysis.items.length === 0) return 'failed';
+      flow.setRows(analysis.items.map(draftFromAi));
       return 'done';
     } catch {
       return 'failed';
@@ -32,8 +34,10 @@ export function useScreenshotImport() {
   return {
     image,
     analyzing: mutation.isPending,
-    failed: mutation.isError || (mutation.isSuccess && mutation.data.length === 0),
-    empty: mutation.isSuccess && mutation.data.length === 0,
+    failed: mutation.isError || (mutation.isSuccess && mutation.data.items.length === 0),
+    empty: mutation.isSuccess && mutation.data.items.length === 0,
+    warnings: mutation.data?.warnings ?? [],
+    analysisMethod: mutation.data?.analysisMethod,
     pickAndAnalyze,
   };
 }

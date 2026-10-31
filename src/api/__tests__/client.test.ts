@@ -33,6 +33,8 @@ describe('buildUrl', () => {
   it('호스트 주소와 /api/v1 포함 Base URL을 같게 정규화한다', () => {
     expect(normalizeApiBaseUrl('https://bob-be.vercel.app')).toBe('https://bob-be.vercel.app');
     expect(normalizeApiBaseUrl('https://bob-be.vercel.app/api/v1/')).toBe('https://bob-be.vercel.app');
+    expect(normalizeApiBaseUrl('https://bob-be.vercel.app/docs')).toBe('https://bob-be.vercel.app');
+    expect(normalizeApiBaseUrl(' https://bob-be.vercel.app/docs/api/v1/ ')).toBe('https://bob-be.vercel.app');
   });
 
   it('기본 주소 + /api/v1 + 경로, 쿼리 인코딩', () => {
@@ -107,5 +109,12 @@ describe('엔드포인트', () => {
     expect(calls[0].url).toBe('https://api.test/api/v1/cart-extractions');
     expect(calls[0].init.body).toBeInstanceOf(FormData);
     expect(header(calls[0], 'Content-Type')).toBeUndefined();
+  });
+
+  it('품목 일괄 등록은 Idempotency-Key를 보낸다', async () => {
+    await bobApi.items.batchCreate({ items: [{ name: '키보드' }] }, 'reg_12345678');
+    expect(calls[0].url).toBe('https://api.test/api/v1/items/batch');
+    expect(header(calls[0], 'Idempotency-Key')).toBe('reg_12345678');
+    expect(header(calls[0], 'Authorization')).toBe('Bearer tok');
   });
 });

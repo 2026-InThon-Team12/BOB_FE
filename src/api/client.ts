@@ -77,7 +77,8 @@ export const bobApi = {
 
   // ── 품목 ─────────────────────────────────────────────
   items: {
-    batchCreate: (body: Body) => authed({ method: 'POST', path: '/items/batch', json: body }),
+    batchCreate: (body: Body, idempotencyKey: string) =>
+      authed({ method: 'POST', path: '/items/batch', json: body, headers: { 'Idempotency-Key': idempotencyKey } }),
     list: () => authed({ method: 'GET', path: '/items' }),
     get: (id: string) => authed({ method: 'GET', path: `/items/${seg(id)}` }),
     patch: (id: string, body: Body) => authed({ method: 'PATCH', path: `/items/${seg(id)}`, json: body }),

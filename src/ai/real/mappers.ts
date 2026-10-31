@@ -12,7 +12,7 @@ import {
   type QuestionTemplate,
 } from '@/types';
 
-import { AiRequestError, type CategoryGuess } from '../types';
+import { AiRequestError, type CartScreenshotAnalysis, type CategoryGuess } from '../types';
 
 /**
  * 서버 Category enum을 앱의 CategoryId로 바꾼다.
@@ -100,14 +100,13 @@ const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sou
   sourceUrl: dto.source_url ?? sourceUrl,
 });
 
-export function mapCartScreenshot(data: unknown): ItemDraft[] {
-  const result = parse(
-    z.union([DraftAnalysisDto, z.array(DraftDto), z.object({ items: z.array(DraftDto) })]),
-    data,
-    '스크린샷 인식',
-  );
-  const items = Array.isArray(result) ? result : result.items;
-  return items.filter((d) => d.name.trim()).map((d) => toDraft(d, 'screenshot'));
+export function mapCartScreenshot(data: unknown): CartScreenshotAnalysis {
+  const result = parse(DraftAnalysisDto, data, '스크린샷 인식');
+  return {
+    items: result.items.filter((d) => d.name.trim()).map((d) => toDraft(d, 'screenshot')),
+    warnings: result.warnings,
+    analysisMethod: result.analysis_method,
+  };
 }
 
 export function mapLink(data: unknown, url: string): ItemDraft {

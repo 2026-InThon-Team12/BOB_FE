@@ -77,16 +77,31 @@ describe('real mappers', () => {
     ).toEqual({ category: 'digital', confidence: 0.5 });
   });
 
-  it('스크린샷 응답: 배열과 { items } 형태 모두 지원, 가격 반올림', () => {
-    const drafts = mapCartScreenshot({ items: [{ name: ' 니트 ', price: 59000.4, category: '의류', confidence: 0.9 }] });
-    expect(drafts).toEqual([
-      { name: '니트', price: 59000, imageUri: undefined, category: 'clothing', categoryConfidence: 0.9, source: 'screenshot', sourceUrl: undefined },
-    ]);
-    expect(mapCartScreenshot([{ name: '이어폰' }])[0]).toMatchObject({ name: '이어폰', category: undefined });
+  it('스크린샷 DraftAnalysis의 items·warnings·analysis_method를 보존한다', () => {
+    const analysis = mapCartScreenshot({
+      items: [{ name: ' 니트 ', price: 59000.4, category: '의류', confidence: 0.9 }],
+      warnings: ['CONFIRM_EXTRACTED_ITEMS'],
+      analysis_method: 'ocr',
+    });
+    expect(analysis).toEqual({
+      items: [
+        {
+          name: '니트',
+          price: 59000,
+          imageUri: undefined,
+          category: 'clothing',
+          categoryConfidence: 0.9,
+          source: 'screenshot',
+          sourceUrl: undefined,
+        },
+      ],
+      warnings: ['CONFIRM_EXTRACTED_ITEMS'],
+      analysisMethod: 'ocr',
+    });
   });
 
   it('OpenAPI 스크린샷 응답의 snake_case·null 필드를 변환한다', () => {
-    const drafts = mapCartScreenshot({
+    const analysis = mapCartScreenshot({
       items: [
         {
           name: ' 오버핏 니트 ',
@@ -104,7 +119,7 @@ describe('real mappers', () => {
       warnings: [],
       analysis_method: 'vision',
     });
-    expect(drafts).toEqual([
+    expect(analysis.items).toEqual([
       {
         name: '오버핏 니트',
         price: undefined,
@@ -115,6 +130,7 @@ describe('real mappers', () => {
         sourceUrl: undefined,
       },
     ]);
+    expect(analysis).toMatchObject({ warnings: [], analysisMethod: 'vision' });
   });
 
   it('OpenAPI 상품 URL DraftAnalysis를 링크 초안으로 변환한다', () => {
@@ -156,11 +172,11 @@ describe('real mappers', () => {
 });
 
 describe('mock', () => {
-  it('장바구니 스크린샷은 품목 3개', async () => {
+  it('장바구니 스크린샷 실패를 고정 상품으로 채우지 않는다', async () => {
     jest.useFakeTimers();
     const p = mockAi.parseCartScreenshot({ uri: 'x' });
     jest.runAllTimers();
-    await expect(p).resolves.toHaveLength(3);
+    await expect(p).rejects.toBeInstanceOf(AiUnavailableError);
     jest.useRealTimers();
   });
 });

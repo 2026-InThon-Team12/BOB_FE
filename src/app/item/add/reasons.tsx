@@ -56,9 +56,10 @@ export default function ReasonsScreen() {
     <Chip key={r.id} label={r.label} selected={step.reasons.includes(r.id)} onPress={() => step.toggle(r.id)} />
   );
 
-  const next = () => {
-    const result = step.next();
+  const next = async () => {
+    const result = await step.next();
     setCalendarOpen(false);
+    if (result === 'failed') return toast(copy.register.remoteRegisterFailed);
     if (result !== 'done') return;
     if (step.trapNames.length > 0 && step.batchId) {
       router.replace({ pathname: '/discount', params: { batch: step.batchId } });
@@ -96,6 +97,7 @@ export default function ReasonsScreen() {
             variant={showTrap ? 'bye' : 'primary'}
             size="lg"
             fullWidth
+            loading={step.registering}
             onPress={next}
           />
         </Stack>

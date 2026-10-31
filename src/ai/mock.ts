@@ -1,11 +1,9 @@
-/**
- * 데모·개발용 mock. 그럴듯한 고정 응답을 약간의 지연과 함께 돌려준다.
- */
+/** 데모·개발용 mock. 실제 인식으로 오인할 수 있는 고정 사진 결과는 만들지 않는다. */
 import { policy } from '@/config/policy';
 import { defaultQuestionTemplates } from '@/constants/questionTemplates';
 
 import { guessCategoryByKeyword } from './fallback';
-import type { AiService } from './types';
+import { AiUnavailableError, type AiService } from './types';
 
 const delay = () => {
   const { minDelayMs, maxDelayMs } = policy.mock;
@@ -21,11 +19,7 @@ export const mockAi: AiService = {
 
   async parseCartScreenshot() {
     await delay();
-    return [
-      { name: '오버핏 니트 가디건', price: 59_000, category: 'clothing', categoryConfidence: 0.95, source: 'screenshot' },
-      { name: '무선 블루투스 이어폰', price: 89_000, category: 'digital', categoryConfidence: 0.93, source: 'screenshot' },
-      { name: '데스크 조명 스탠드', price: 34_900, category: 'furniture', categoryConfidence: 0.71, source: 'screenshot' },
-    ];
+    throw new AiUnavailableError('parseCartScreenshot');
   },
 
   async parseLink(url) {

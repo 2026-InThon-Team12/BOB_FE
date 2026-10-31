@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 
 import { policy } from '@/config/policy';
-import { updateItem, useBudget, useExpenses, useItem, useItems, useThisMonth, useToday } from '@/data';
+import { registerItemsRemote, updateItem, useBudget, useExpenses, useItem, useItems, useThisMonth, useToday } from '@/data';
 import { bucketForCategory, remainingBudget } from '@/lib/calc';
 import type { ReasonId } from '@/types';
 
@@ -15,9 +15,10 @@ import { useAddFlow } from './AddFlowContext';
 type Draft = { reasons: ReasonId[]; otherText: string; saleEndsAt?: string };
 
 export function useReasonStep() {
-  const { createdIds } = useAddFlow();
+  const { createdIds, registrationKey } = useAddFlow();
   const [index, setIndex] = useState(0);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [registering, setRegistering] = useState(false);
   const today = useToday();
 
   const id = createdIds[index];
@@ -53,8 +54,8 @@ export function useReasonStep() {
     .filter((n): n is string => !!n);
 
   const save = () => {
-    if (!item) return;
-    updateItem(item.id, {
+    if (!item) return undefined;
+    return updateItem(item.id, {
       reasons: draft.reasons,
       reasonOtherText: draft.reasons.includes('other') ? draft.otherText.trim() || undefined : undefined,
       saleEndsAt: draft.reasons.includes('discount_limited') ? draft.saleEndsAt : undefined,
@@ -80,9 +81,26 @@ export function useReasonStep() {
     batchId: item?.batchId,
     createdCount: createdIds.length,
     /** 현재 품목 저장 후 다음 품목으로. 마지막이면 'done' */
-    next: (): 'next' | 'done' => {
-      save();
-      if (isLast) return 'done';
+    registering,
+    next: async (): Promise<'next' | 'done' | 'failed'> => {
+      const saved = save();
+      if (!saved) return 'failed';
+      if (isLast) {
+        const confirmed = createdIds
+          .map((createdId) => (createdId === saved.id ? saved : allItems.find((candidate) => candidate.id === createdId)))
+          .filter((candidate): candidate is NonNullable<typeof candidate> => !!candidate);
+        if (confirmed.length !== createdIds.length) return 'failed';
+        setRegistering(true);
+        try {
+          await registerItemsRemote(confirmed, registrationKey);
+          return 'done';
+        } catch (error) {
+          console.warn('[register] items/batch 실패', error);
+          return 'failed';
+        } finally {
+          setRegistering(false);
+        }
+      }
       setIndex((i) => i + 1);
       return 'next';
     },

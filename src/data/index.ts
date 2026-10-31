@@ -27,6 +27,7 @@ export { getNow, getNowIso, getThisMonth, getToday, useThisMonth, useToday } fro
 export { answerToday } from './actions/answers';
 export { createGoal, deleteGoal, markGoalAchieved, setActiveGoal, updateGoal } from './actions/goals';
 export { addItems, decideItem, removeItem, submitReview, updateItem, type ItemPatch } from './actions/items';
+export { registerItemsRemote } from './actions/remoteItems';
 export {
   completeOnboarding,
   resetAllData,

@@ -61,7 +61,9 @@ export default function ScreenshotScreen() {
             <Icon name="warning" tone="warning" />
             <Text variant="heading">{importer.empty ? copy.register.analyzeEmpty : copy.register.analyzeFailed}</Text>
             <Text variant="label" tone="secondary">
-              {copy.register.analyzeFailedBody}
+              {importer.empty
+                ? copy.register.analyzeEmptyBody(importer.warnings, importer.analysisMethod)
+                : copy.register.analyzeFailedBody}
             </Text>
           </Stack>
         </Card>

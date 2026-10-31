@@ -56,6 +56,8 @@ type AddFlow = {
   /** 등록을 마친 물품 id (이유 고르기 단계에서 사용) */
   createdIds: string[];
   setCreatedIds: (ids: string[]) => void;
+  /** /items/batch 재시도에도 같은 값을 쓰는 멱등성 키 */
+  registrationKey: string;
 };
 
 const Ctx = createContext<AddFlow | null>(null);
@@ -63,6 +65,7 @@ const Ctx = createContext<AddFlow | null>(null);
 export function AddFlowProvider({ children }: { children: ReactNode }) {
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [createdIds, setCreatedIds] = useState<string[]>([]);
+  const [registrationKey] = useState(() => createId('reg_'));
 
   const value = useMemo<AddFlow>(
     () => ({
@@ -77,8 +80,9 @@ export function AddFlowProvider({ children }: { children: ReactNode }) {
       },
       createdIds,
       setCreatedIds,
+      registrationKey,
     }),
-    [rows, createdIds],
+    [rows, createdIds, registrationKey],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

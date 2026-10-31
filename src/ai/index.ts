@@ -44,4 +44,11 @@ export function withFallback(primary: AiService, fallback: AiService): AiService
 
 export const ai: AiService = env.aiMode === 'real' ? withFallback(realAi, fallbackAi) : mockAi;
 
-export { AiRequestError, AiUnavailableError, type AiService, type CategoryGuess, type ImageInput } from './types';
+export {
+  AiRequestError,
+  AiUnavailableError,
+  type AiService,
+  type CartScreenshotAnalysis,
+  type CategoryGuess,
+  type ImageInput,
+} from './types';

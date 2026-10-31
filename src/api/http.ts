@@ -11,8 +11,12 @@ import { ApiError } from './errors';
 
 export const API_PREFIX = '/api/v1';
 
-/** README에 적힌 Android Base URL(`/api/v1/` 포함)과 호스트 주소 둘 다 받는다. */
-export const normalizeApiBaseUrl = (baseUrl: string) => baseUrl.replace(/\/$/, '').replace(/\/api\/v1$/i, '');
+/**
+ * API 호스트만 남긴다. `/docs`는 Swagger 화면이며 API base URL이 아니다.
+ * 운영 설정에 잘못 들어간 `/docs`, `/api/v1`, `/docs/api/v1`도 안전하게 보정한다.
+ */
+export const normalizeApiBaseUrl = (baseUrl: string) =>
+  baseUrl.trim().replace(/\/+$/, '').replace(/\/api\/v1$/i, '').replace(/\/docs$/i, '');
 
 export type ImageUpload = {
   uri: string;
@@ -28,6 +32,7 @@ type RequestOptions = {
   json?: unknown;
   image?: { field?: string; upload: ImageUpload };
   query?: Record<string, string | number | undefined>;
+  headers?: Record<string, string>;
   /** 인증 토큰 (게스트 세션). 없으면 Authorization 헤더를 보내지 않는다 */
   token?: string | null;
 };
@@ -56,7 +61,7 @@ function toFormData({ field = 'image', upload }: NonNullable<RequestOptions['ima
 export async function request(opts: RequestOptions): Promise<unknown> {
   if (!env.apiBaseUrl) throw new ApiError('EXPO_PUBLIC_API_BASE_URL이 설정되지 않았어요.', 'not_configured');
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  const headers: Record<string, string> = { Accept: 'application/json', ...opts.headers };
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
   let body: BodyInit | undefined;
   if (opts.image) {
@@ -68,9 +73,10 @@ export async function request(opts: RequestOptions): Promise<unknown> {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), policy.ai.timeoutMs);
+  const url = buildUrl(opts.path, opts.query);
   let res: Response;
   try {
-    res = await fetch(buildUrl(opts.path, opts.query), { method: opts.method, headers, body, signal: controller.signal });
+    res = await fetch(url, { method: opts.method, headers, body, signal: controller.signal });
   } catch (e) {
     const aborted = e instanceof Error && e.name === 'AbortError';
     throw new ApiError(aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.', aborted ? 'timeout' : 'network');
@@ -88,6 +94,6 @@ export async function request(opts: RequestOptions): Promise<unknown> {
       data = text;
     }
   }
-  if (!res.ok) throw new ApiError(`서버 오류 (${res.status})`, 'http', res.status, data);
+  if (!res.ok) throw new ApiError(`서버 오류 (${res.status}): ${url}`, 'http', res.status, data);
   return data;
 }

@@ -14,10 +14,17 @@ export type ImageInput = {
 
 export type CategoryGuess = { category: CategoryId; confidence: number };
 
+/** POST /cart-extractions의 DraftAnalysis 응답 */
+export type CartScreenshotAnalysis = {
+  items: ItemDraft[];
+  warnings: string[];
+  analysisMethod: 'text' | 'vision' | 'ocr' | 'manual';
+};
+
 export interface AiService {
   classifyCategory(input: { name: string; price?: number }): Promise<CategoryGuess>;
-  /** 장바구니 스크린샷 → 품목 목록 (기능 3) */
-  parseCartScreenshot(image: ImageInput): Promise<ItemDraft[]>;
+  /** 장바구니 스크린샷 → 서버 분석 결과 (기능 3) */
+  parseCartScreenshot(image: ImageInput): Promise<CartScreenshotAnalysis>;
   /** 상품 링크 → 품목 (OG 파싱, 웹은 서버 프록시 필요) */
   parseLink(url: string): Promise<ItemDraft>;
   /** 할인 조건 스크린샷 → 조건 (기능 5, 예: 3만 원 이상 10% 할인) */

@@ -144,6 +144,10 @@ export const copy = {
     analyzeFailed: '장바구니를 읽지 못했어요',
     analyzeFailedBody: '다른 캡처로 다시 해 보거나 직접 입력해 주세요.',
     analyzeEmpty: '품목을 찾지 못했어요',
+    analyzeEmptyBody: (warnings: string[], method?: string) =>
+      `${method ? `${method.toUpperCase()} 분석에서 ` : ''}품목이 나오지 않았어요.${
+        warnings.length ? ` 서버 안내: ${warnings.join(', ')}` : ''
+      }`,
     retry: '다시 고르기',
     toManual: '직접 입력하기',
     // 링크
@@ -194,6 +198,7 @@ export const copy = {
     otherDiscountTitle: '"3만 원 이상 10% 할인"이 보일 때',
     otherDiscountBody: '할인 조건을 캡처하면 더 쓰게 되는 돈을 계산해요',
     started: (n: number) => `${n}개 시뮬레이션을 시작했어요`,
+    remoteRegisterFailed: '서버에 등록하지 못했어요. 잠시 후 다시 시도해 주세요.',
   },
   notification: {
     title: 'BOB · 오늘의 질문',
