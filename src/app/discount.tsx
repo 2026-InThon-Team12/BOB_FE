@@ -37,17 +37,22 @@ const useStyles = makeStyles((t) => ({
 export default function DiscountTrapScreen() {
   const styles = useStyles();
   const toast = useToast();
-  const { batch } = useLocalSearchParams<{ batch?: string }>();
-  const trap = useDiscountTrap(batch);
+  const { batch, registration } = useLocalSearchParams<{ batch?: string; registration?: string }>();
+  const trap = useDiscountTrap(batch, registration);
   const { check } = trap;
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState<number | null>(null);
 
   const home = () => router.dismissTo('/');
-  const keepNeeded = () => {
-    const n = trap.keepNeededOnly();
-    if (n > 0) toast(copy.trap.keptNeeded(n));
-    home();
+  const confirm = async (decision: 'NEEDED' | 'ALL') => {
+    try {
+      const n = await trap.confirm(decision);
+      if (n === null) return;
+      if (n > 0) toast(copy.trap.keptNeeded(n));
+      home();
+    } catch {
+      toast(copy.register.remoteRegisterFailed);
+    }
   };
   const addLine = () => {
     if (!newName.trim() || !newPrice) return;
@@ -238,11 +243,11 @@ export default function DiscountTrapScreen() {
       {hasLines &&
         (isTrap ? (
           <Stack gap={2}>
-            <Button label={copy.trap.ctaTrap(check.payNeeded)} size="lg" fullWidth onPress={keepNeeded} />
-            <Button label={copy.trap.ctaAll} variant="ghost" fullWidth onPress={home} />
+            <Button label={copy.trap.ctaTrap(check.payNeeded)} size="lg" fullWidth loading={trap.registering} onPress={() => confirm('NEEDED')} />
+            <Button label={copy.trap.ctaAll} variant="ghost" fullWidth disabled={trap.registering} onPress={() => confirm('ALL')} />
           </Stack>
         ) : (
-          <Button label={copy.trap.ctaSmart} size="lg" fullWidth onPress={home} />
+          <Button label={copy.trap.ctaSmart} size="lg" fullWidth loading={trap.registering} onPress={() => confirm('ALL')} />
         ))}
     </Screen>
   );

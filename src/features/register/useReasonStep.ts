@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 
 import { policy } from '@/config/policy';
-import { registerItemsRemote, updateItem, useBudget, useExpenses, useItem, useItems, useThisMonth, useToday } from '@/data';
+import { registerAfterReasons, updateItem, useBudget, useExpenses, useItem, useItems, useThisMonth, useToday } from '@/data';
 import { bucketForCategory, remainingBudget } from '@/lib/calc';
 import type { ReasonId } from '@/types';
 
@@ -79,10 +79,11 @@ export function useReasonStep() {
     /** 마지막 품목에서 할인 함정 확인으로 갈지 */
     trapNames: isLast ? trapNames : [],
     batchId: item?.batchId,
+    registrationKey,
     createdCount: createdIds.length,
     /** 현재 품목 저장 후 다음 품목으로. 마지막이면 'done' */
     registering,
-    next: async (): Promise<'next' | 'done' | 'failed'> => {
+    next: async (): Promise<'next' | 'done' | 'discount' | 'failed'> => {
       const saved = save();
       if (!saved) return 'failed';
       if (isLast) {
@@ -92,8 +93,7 @@ export function useReasonStep() {
         if (confirmed.length !== createdIds.length) return 'failed';
         setRegistering(true);
         try {
-          await registerItemsRemote(confirmed, registrationKey);
-          return 'done';
+          return await registerAfterReasons(confirmed, registrationKey);
         } catch (error) {
           console.warn('[register] items/batch 실패', error);
           return 'failed';

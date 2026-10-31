@@ -1,5 +1,16 @@
-import { toApiItemInput } from '@/data/actions/remoteItems';
+import { bobApi } from '@/api';
+import { addItems, resetAllData } from '@/data';
+import { completeDiscountRegistration, registerAfterReasons, toApiItemInput } from '@/data/actions/remoteItems';
+import { getState } from '@/data/store';
 import { makeItem } from '@/test/factories';
+import type { DiscountRule } from '@/types';
+
+jest.mock('@/api', () => ({ bobApi: { items: { batchCreate: jest.fn() } } }));
+jest.mock('@/config/env', () => ({ env: { aiMode: 'real' } }));
+
+const post = bobApi.items.batchCreate as jest.Mock;
+const rule: DiscountRule = { minAmount: 30000, value: 10, unit: 'pct', freeShipOn: true, freeShipMin: 50000, shipFee: 3000 };
+beforeEach(() => { post.mockReset(); post.mockResolvedValue({ items: [] }); resetAllData(); });
 
 describe('BE 품목 등록 mapper', () => {
   it('카테고리·이유·출처를 OpenAPI enum으로 변환한다', () => {
@@ -28,5 +39,62 @@ describe('BE 품목 등록 mapper', () => {
       image_url: undefined,
       question_mode: 'LOCAL',
     });
+  });
+});
+
+describe('할인 확인 후 등록', () => {
+  const createCart = () => addItems([
+    { name: '말차', price: 30800, category: 'food', reasons: ['bundle_discount'], source: 'screenshot' },
+    { name: '전기난로', price: 158000, category: 'appliance', reasons: ['peer'], source: 'screenshot' },
+  ]);
+
+  it('앞 품목만 추가 할인 이유여도 이유 선택에서는 서버 요청 없이 할인 화면으로 간다', async () => {
+    await expect(registerAfterReasons(createCart(), 'reg_test_123')).resolves.toBe('discount');
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('추가 할인 이유가 없으면 일반 등록을 그대로 완료한다', async () => {
+    await expect(registerAfterReasons([makeItem({ reasons: ['need'] })], 'reg_normal_123')).resolves.toBe('done');
+    expect(post).toHaveBeenCalledWith({ items: [expect.objectContaining({ purchase_reasons: ['NECESSITY'] })] }, 'reg_normal_123');
+  });
+
+  it('화면의 품목 순서에 맞는 인덱스와 할인·배송 조건을 함께 보내고 성공한 뒤만 Bye한다', async () => {
+    const items = createCart();
+    post.mockImplementationOnce(async () => {
+      expect(getState().items[items[0].id].status).toBe('simulating');
+      return {};
+    });
+    const review = { rule, neededIds: [items[1].id], decision: 'NEEDED' as const };
+    await expect(completeDiscountRegistration(items, review, 'reg_test_123')).resolves.toBe(1);
+    expect(post).toHaveBeenCalledWith(expect.objectContaining({ discount_review: {
+      decision: 'NEEDED', needed_item_indexes: [1],
+      rule: { minimum_amount: 30000, unit: 'PCT', value: 10, shipping_fee: 3000, free_shipping_enabled: true, free_shipping_minimum: 50000 },
+    } }), 'reg_test_123');
+    expect(getState().items[items[0].id].status).toBe('abandoned');
+    expect(getState().items[items[1].id].status).toBe('simulating');
+  });
+
+  it('등록 실패 시 로컬 결정을 바꾸지 않고 같은 요청·키로 재시도한다', async () => {
+    const items = createCart();
+    const review = { rule, neededIds: [], decision: 'NEEDED' as const };
+    post.mockRejectedValueOnce(new Error('timeout'));
+    await expect(completeDiscountRegistration(items, review, 'reg_retry_123')).rejects.toThrow('timeout');
+    expect(items.every((item) => getState().items[item.id].status === 'simulating')).toBe(true);
+    await expect(completeDiscountRegistration(items, review, 'reg_retry_123')).resolves.toBe(2);
+    expect(post.mock.calls[0]).toEqual(post.mock.calls[1]);
+    expect(post.mock.calls[1][0].discount_review.needed_item_indexes).toEqual([]);
+  });
+
+  it('다 살게요도 할인 검토를 보내며 무료배송 OFF·원 할인은 정확히 변환한다', async () => {
+    const items = createCart();
+    await expect(completeDiscountRegistration(items, {
+      rule: { ...rule, unit: 'won', value: 3000, freeShipOn: false },
+      neededIds: [items[1].id], decision: 'ALL',
+    }, 'reg_all_123')).resolves.toBe(0);
+    expect(post.mock.calls[0][0].discount_review).toMatchObject({
+      decision: 'ALL', needed_item_indexes: [1],
+      rule: { unit: 'WON', value: 3000, shipping_fee: 3000, free_shipping_enabled: false, free_shipping_minimum: null },
+    });
+    expect(items.every((item) => getState().items[item.id].status === 'simulating')).toBe(true);
   });
 });

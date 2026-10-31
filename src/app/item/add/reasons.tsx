@@ -60,10 +60,9 @@ export default function ReasonsScreen() {
     const result = await step.next();
     setCalendarOpen(false);
     if (result === 'failed') return toast(copy.register.remoteRegisterFailed);
-    if (result !== 'done') return;
-    if (step.trapNames.length > 0 && step.batchId) {
-      router.replace({ pathname: '/discount', params: { batch: step.batchId } });
-    } else {
+    if (result === 'discount' && step.batchId) {
+      router.replace({ pathname: '/discount', params: { batch: step.batchId, registration: step.registrationKey } });
+    } else if (result === 'done') {
       toast(copy.register.started(step.createdCount));
       router.dismissTo('/');
     }

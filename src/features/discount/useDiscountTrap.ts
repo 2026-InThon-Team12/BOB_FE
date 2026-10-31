@@ -3,10 +3,10 @@
  * - 등록 흐름에서 오면 같은 묶음(batch)의 물건으로, 등록 방법의 바로가기로 오면 직접 담아서 계산한다.
  * - 입력·스위치를 바꾸면 즉시 다시 계산한다.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { policy } from '@/config/policy';
-import { decideItem, useItems } from '@/data';
+import { completeDiscountRegistration, useItems } from '@/data';
 import { discountCheck } from '@/lib/calc';
 import { createId } from '@/lib/id';
 import type { DiscountRule } from '@/types';
@@ -22,8 +22,10 @@ export type TrapLine = {
   addedForDiscount: boolean;
 };
 
-export function useDiscountTrap(batchId: string | undefined) {
+export function useDiscountTrap(batchId: string | undefined, registrationKey?: string) {
   const items = useItems();
+  const [registering, setRegistering] = useState(false);
+  const inFlight = useRef(false);
   const batchLines = useMemo<TrapLine[]>(
     () =>
       batchId
@@ -70,6 +72,7 @@ export function useDiscountTrap(batchId: string | undefined) {
   const check = discountCheck({ lines: lines.map((l) => ({ name: l.name, price: l.price, planned: isOn(l) })), rule });
 
   return {
+    registering,
     fromBatch: !!batchId,
     lines: lines.map((l) => ({ ...l, on: isOn(l) })),
     toggle: (key: string) => {
@@ -98,11 +101,25 @@ export function useDiscountTrap(batchId: string | undefined) {
     addManualLine: (name: string, price: number) =>
       setManualLines((ls) => [...ls, { key: createId('ln_'), name, price, addedForDiscount: false }]),
     removeManualLine: (key: string) => setManualLines((ls) => ls.filter((l) => l.key !== key)),
-    /** "필요한 것만 살게요": 꺼 둔 등록 물건은 Bye (참은 금액으로 쌓인다). 처리한 개수 */
-    keepNeededOnly: (): number => {
-      const off = lines.filter((l) => !isOn(l) && l.itemId);
-      off.forEach((l) => decideItem(l.itemId!, 'abandon'));
-      return off.length;
+    /** Register reviewed conditions before applying local Bye decisions. */
+    confirm: async (decision: 'NEEDED' | 'ALL'): Promise<number | null> => {
+      if (inFlight.current) return null;
+      inFlight.current = true;
+      setRegistering(true);
+      try {
+        const batchItems = lines.flatMap((line) => {
+          const item = items.find((candidate) => candidate.id === line.itemId);
+          return item ? [item] : [];
+        });
+        return await completeDiscountRegistration(batchItems, {
+          rule,
+          neededIds: lines.filter(isOn).flatMap((line) => line.itemId ? [line.itemId] : []),
+          decision,
+        }, registrationKey);
+      } finally {
+        inFlight.current = false;
+        setRegistering(false);
+      }
     },
   };
 }
