@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ApiError, bobApi, buildUrl, ensureGuestSession, extractToken, normalizeApiBaseUrl } from '@/api';
 import { resetSessionCache } from '@/api/session';
+import { realAi } from '@/ai/real';
 
 jest.mock('@/config/env', () => ({
   env: { demo: false, aiMode: 'real', apiBaseUrl: 'https://api.test/' },
@@ -46,6 +47,21 @@ describe('buildUrl', () => {
 });
 
 describe('게스트 세션', () => {
+  it('사진 첫 업로드: 게스트 발급 → image multipart 인증 요청 → 실제 상품으로 변환', async () => {
+    const append = jest.spyOn(FormData.prototype, 'append');
+    responses.push({ status: 201, body: { access_token: 'cart-token' } }, { status: 200, body: {
+      items: [{ name: '사진 속 키보드', price: 45000, category: 'DIGITAL', source: 'SCREENSHOT' }],
+      warnings: ['CONFIRM_EXTRACTED_ITEMS'], analysis_method: 'ocr',
+    } });
+    const result = await realAi.parseCartScreenshot({ uri: 'file:///prepared.png', name: 'cart.png', mimeType: 'image/png' });
+    expect(calls.map((c) => c.url)).toEqual(['https://api.test/api/v1/guest-sessions', 'https://api.test/api/v1/cart-extractions']);
+    expect(header(calls[1], 'Authorization')).toBe('Bearer cart-token');
+    expect(header(calls[1], 'Content-Type')).toBeUndefined();
+    expect(append).toHaveBeenCalledWith('image', { uri: 'file:///prepared.png', name: 'cart.png', type: 'image/png' });
+    append.mockRestore();
+    expect(result.items).toEqual([expect.objectContaining({ name: '사진 속 키보드', price: 45000, category: 'digital', source: 'screenshot' })]);
+  });
+
   it('토큰 필드 이름 후보', () => {
     expect(extractToken({ token: 'a' })).toBe('a');
     expect(extractToken({ accessToken: 'b' })).toBe('b');

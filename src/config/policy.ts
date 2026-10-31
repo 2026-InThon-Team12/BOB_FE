@@ -64,7 +64,15 @@ export const policy = {
 
   /** AI 호출 */
   // Vercel cold start + vision 분석 시간을 고려한 상한
-  ai: { timeoutMs: 60_000 },
+  ai: { timeoutMs: 110_000 },
+
+  cartImage: {
+    maxBytes: 4_000_000,
+    maxPixels: 12_000_000,
+    maxSide: 8_000,
+    pngMaxPixels: 4_000_000,
+    jpegQualities: [0.94, 0.88, 0.8, 0.72, 0.64],
+  },
 
   /** mock AI 응답 지연 (실제 호출 느낌을 내기 위함) */
   mock: { minDelayMs: 300, maxDelayMs: 800 },

@@ -5,8 +5,8 @@
 export const env = {
   /** 데모·개발용 화면(/dev) 노출 여부 */
   demo: process.env.EXPO_PUBLIC_DEMO === 'true',
-  /** AI 구현체: mock(기본) | real(BE 서버). real이 실패하면 로컬 fallback으로 바뀐다 */
-  aiMode: process.env.EXPO_PUBLIC_AI_MODE === 'real' ? ('real' as const) : ('mock' as const),
+  /** APK와 동일하게 서버를 기본 사용. mock은 개발자가 명시한 경우만 사용한다. */
+  aiMode: process.env.EXPO_PUBLIC_AI_MODE === 'mock' ? ('mock' as const) : ('real' as const),
   /** BE 서버 주소 (예: https://api.example.com — /api/v1은 붙이지 않는다) */
-  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? '',
+  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || 'https://bob-be.vercel.app',
 } as const;

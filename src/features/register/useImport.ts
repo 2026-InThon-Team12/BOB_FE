@@ -3,7 +3,8 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ai } from '@/ai';
-import { pickImage, type PickedImage } from '@/lib/image';
+import { copy } from '@/constants/copy';
+import { pickImage, prepareCartImage, type PickedImage } from '@/lib/image';
 
 import { draftFromAi, emptyDraft, useAddFlow } from './AddFlowContext';
 
@@ -12,11 +13,22 @@ export type ImportResult = 'done' | 'canceled' | 'failed';
 export function useScreenshotImport() {
   const flow = useAddFlow();
   const [image, setImage] = useState<PickedImage | null>(null);
-  const mutation = useMutation({ mutationFn: (img: PickedImage) => ai.parseCartScreenshot(img) });
+  const [pickError, setPickError] = useState<Error | null>(null);
+  const mutation = useMutation({ mutationFn: async (img: PickedImage) =>
+    ai.parseCartScreenshot(await prepareCartImage(img)) });
 
   /** 사진을 고르고 인식까지. 품목을 하나라도 찾으면 'done' */
   const pickAndAnalyze = async (): Promise<ImportResult> => {
-    const picked = await pickImage();
+    setPickError(null);
+    mutation.reset();
+    let picked: PickedImage | null;
+    try {
+      picked = await pickImage();
+    } catch {
+      flow.setRows([]);
+      setPickError(new Error(copy.register.imageUnreadable));
+      return 'failed';
+    }
     if (!picked) return 'canceled';
     // 새 분석을 시작하면 이전 사진의 결과는 등록할 수 없도록 즉시 비운다.
     flow.setRows([]);
@@ -34,7 +46,8 @@ export function useScreenshotImport() {
   return {
     image,
     analyzing: mutation.isPending,
-    failed: mutation.isError || (mutation.isSuccess && mutation.data.items.length === 0),
+    failed: !!pickError || mutation.isError || (mutation.isSuccess && mutation.data.items.length === 0),
+    errorMessage: copy.register.imageError(pickError ?? mutation.error),
     empty: mutation.isSuccess && mutation.data.items.length === 0,
     warnings: mutation.data?.warnings ?? [],
     analysisMethod: mutation.data?.analysisMethod,

@@ -36,7 +36,7 @@ describe('withFallback', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const ai = withFallback(failing, fallbackAi);
     await expect(ai.classifyCategory({ name: '캠핑 랜턴' })).resolves.toMatchObject({ category: 'hobby' });
-    await expect(ai.parseCartScreenshot({ uri: 'x' })).rejects.toBeInstanceOf(AiUnavailableError);
+    await expect(ai.parseCartScreenshot({ uri: 'x' })).rejects.toMatchObject({ code: 'network', message: 'x' });
     warn.mockRestore();
   });
 

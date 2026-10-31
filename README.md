@@ -33,7 +33,9 @@ npm install
 
 ### 2. 환경 변수 설정
 
-프로젝트 루트에 `.env` 파일을 만들고 필요한 값을 설정합니다.
+기본값은 실제 BoB 서버 연결입니다. `.env` 없이도 사진 분석을 사용할 수 있습니다.
+다른 환경을 사용하려면 `.env.example`을 참고해 프로젝트 루트에 `.env.local`을 만듭니다.
+기존 `.env*`에 `EXPO_PUBLIC_AI_MODE=mock`이 있다면 `real`로 변경합니다.
 
 ```dotenv
 # 데모·개발자 도구 노출
@@ -46,7 +48,13 @@ EXPO_PUBLIC_AI_MODE=real
 EXPO_PUBLIC_API_BASE_URL=https://bob-be.vercel.app
 ```
 
-`.env`에는 민감한 값을 넣을 수 있으므로 Git에 커밋하지 않습니다.
+`EXPO_PUBLIC_*`에는 앱에 노출돼도 되는 설정만 넣습니다. 비밀키는 넣지 않습니다.
+환경변수를 바꾼 뒤 Expo Go에서 전체 Reload를 실행합니다.
+
+사진 업로드는 APK와 같이 최대 1200만 화소/긴 변 8000px를 유지하고,
+작은 스크린샷은 PNG, 큰 파일은 JPEG 품질 조정으로 4,000,000바이트 이하로 전송합니다.
+변환된 파일의 MIME·이름을 맞춰 `image` multipart 필드로 업로드합니다.
+사진 분석 오류는 샘플 상품이나 다른 오류로 대체하지 않고 재시도 화면에 표시합니다.
 
 ### 3. 앱 실행
 

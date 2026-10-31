@@ -143,6 +143,17 @@ export const copy = {
     analyzingBody: '품목명·가격·카테고리를 한 번에 찾는 중이에요.',
     analyzeFailed: '장바구니를 읽지 못했어요',
     analyzeFailedBody: '다른 캡처로 다시 해 보거나 직접 입력해 주세요.',
+    imageUnreadable: '사진을 열 수 없어요. 사진 접근 권한을 확인하고 다시 선택해 주세요.',
+    imageTooLarge: '사진이 너무 커요. 장바구니를 나누어 캡처한 뒤 다시 올려 주세요.',
+    imageError: (error: unknown) => {
+      const e = error as { code?: string; status?: number; message?: string } | null;
+      if (e?.status === 413) return '사진이 너무 커요. 장바구니를 나누어 캡처해 주세요.';
+      if (e?.status === 404) return '사진 분석 서버에 연결하지 못했어요 (404). 잠시 후 다시 시도해 주세요.';
+      if (e?.code === 'timeout') return '사진 분석 시간이 초과됐어요. 다시 시도해 주세요.';
+      if (e?.code === 'network') return '인터넷 연결을 확인하고 다시 시도해 주세요.';
+      if (e?.code === 'http') return `사진 분석 요청에 실패했어요 (${e.status}). 다시 시도해 주세요.`;
+      return e?.message ?? '다른 캡처로 다시 해 보거나 직접 입력해 주세요.';
+    },
     analyzeEmpty: '품목을 찾지 못했어요',
     analyzeEmptyBody: (warnings: string[], method?: string) =>
       `${method ? `${method.toUpperCase()} 분석에서 ` : ''}품목이 나오지 않았어요.${
