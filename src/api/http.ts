@@ -3,6 +3,8 @@
  * 금액은 원 단위 정수로 주고받는다 (BE 공유 문서).
  */
 import { Platform } from 'react-native';
+import { File } from 'expo-file-system';
+import { fetch as expoFetch } from 'expo/fetch';
 
 import { env } from '@/config/env';
 import { policy } from '@/config/policy';
@@ -44,15 +46,15 @@ export const buildUrl = (path: string, query?: RequestOptions['query']) => {
   return `${base}?${params.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&')}`;
 };
 
-function toFormData({ field = 'image', upload }: NonNullable<RequestOptions['image']>): FormData {
+export function toFormData({ field = 'image', upload }: NonNullable<RequestOptions['image']>): FormData {
   const form = new FormData();
   const name = upload.name ?? 'upload.jpg';
-  const type = upload.mimeType ?? 'image/jpeg';
   if (Platform.OS === 'web' && upload.file) {
     form.append(field, upload.file, name);
   } else {
-    // React Native의 FormData는 파일을 이 형태로 받는다
-    form.append(field, { uri: upload.uri, name, type } as unknown as Blob);
+    // SDK 58's expo/fetch cannot serialize RN's legacy { uri, name, type } object.
+    // File exposes bytes(), which Expo's multipart encoder actually reads.
+    form.append(field, new File(upload.uri), name);
   }
   return form;
 }
@@ -76,10 +78,12 @@ export async function request(opts: RequestOptions): Promise<unknown> {
   const url = buildUrl(opts.path, opts.query);
   let res: Response;
   try {
-    res = await fetch(url, { method: opts.method, headers, body, signal: controller.signal });
+    res = await expoFetch(url, { method: opts.method, headers, body, signal: controller.signal });
   } catch (e) {
-    const aborted = e instanceof Error && e.name === 'AbortError';
-    throw new ApiError(aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.', aborted ? 'timeout' : 'network');
+    const aborted = controller.signal.aborted || (e instanceof Error && e.name === 'AbortError');
+    const error = new ApiError(aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.', aborted ? 'timeout' : 'network');
+    error.cause = e;
+    throw error;
   } finally {
     clearTimeout(timer);
   }

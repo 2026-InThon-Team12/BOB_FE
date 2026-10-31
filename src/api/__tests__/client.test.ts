@@ -57,7 +57,7 @@ describe('게스트 세션', () => {
     expect(calls.map((c) => c.url)).toEqual(['https://api.test/api/v1/guest-sessions', 'https://api.test/api/v1/cart-extractions']);
     expect(header(calls[1], 'Authorization')).toBe('Bearer cart-token');
     expect(header(calls[1], 'Content-Type')).toBeUndefined();
-    expect(append).toHaveBeenCalledWith('image', { uri: 'file:///prepared.png', name: 'cart.png', type: 'image/png' });
+    expect(append).toHaveBeenCalledWith('image', expect.objectContaining({ uri: 'file:///prepared.png', bytes: expect.any(Function) }), 'cart.png');
     append.mockRestore();
     expect(result.items).toEqual([expect.objectContaining({ name: '사진 속 키보드', price: 45000, category: 'digital', source: 'screenshot' })]);
   });

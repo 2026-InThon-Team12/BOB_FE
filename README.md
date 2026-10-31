@@ -54,6 +54,9 @@ EXPO_PUBLIC_API_BASE_URL=https://bob-be.vercel.app
 사진 업로드는 APK와 같이 최대 1200만 화소/긴 변 8000px를 유지하고,
 작은 스크린샷은 PNG, 큰 파일은 JPEG 품질 조정으로 4,000,000바이트 이하로 전송합니다.
 변환된 파일의 MIME·이름을 맞춰 `image` multipart 필드로 업로드합니다.
+Expo SDK 58의 기본 fetch는 `{uri, name, type}` 형태의 React Native 파일 객체를
+직렬화하지 못합니다. `expo-file-system`의 `File`과 `expo/fetch`로 실제 파일 바이트를 전송합니다.
+이 변경을 받은 뒤에는 `npm ci`로 추가된 SDK 호환 의존성을 설치하고 Expo를 다시 실행합니다.
 사진 분석 오류는 샘플 상품이나 다른 오류로 대체하지 않고 재시도 화면에 표시합니다.
 
 ### 3. 앱 실행
