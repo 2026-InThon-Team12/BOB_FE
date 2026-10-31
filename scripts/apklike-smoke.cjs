@@ -36,6 +36,7 @@ const server = http.createServer((req, res) => {
       items = [];
     let photo = 0,
       unauthenticated = false,
+      rejectEarlyBye = true,
       goal = null,
       budget = null;
     const expenses = [];
@@ -107,8 +108,16 @@ const server = http.createServer((req, res) => {
       else if (endpoint.endsWith('/result')) body = { answered_days: 1 };
       else if (endpoint.startsWith('/items/') && endpoint.endsWith('/decision')) {
         const item = items.find((i) => i.id === endpoint.split('/')[2]);
-        Object.assign(item, request.postDataJSON());
-        body = item;
+        const payload = request.postDataJSON();
+        if (rejectEarlyBye && payload.decision === 'GIVE_UP' && item.simulation.status !== 'COMPLETED') {
+          status = 409;
+          body = {
+            error: { code: 'SIMULATION_NOT_COMPLETE', message: '시뮬레이션 종료 후 포기할 수 있습니다.' },
+          };
+        } else {
+          Object.assign(item, payload);
+          body = item;
+        }
       } else if (endpoint === '/discount-previews')
         body = {
           needed: { subtotal: 45000, discount: 0, shipping: 0, total: 45000 },
@@ -347,6 +356,38 @@ const server = http.createServer((req, res) => {
     await page.getByRole('button', { name: '답변 완료 · 수정하기', exact: true }).waitFor();
     await click('뒤로');
     await page.getByRole('button', { name: '물건 등록', exact: true }).waitFor();
+    // Current server rejects early Bye: keep the screen, item and saved answers intact.
+    await click('사진 1 상품 기록 보기');
+    await page.getByRole('button', { name: 'Bye 안 살래요', exact: true }).waitFor();
+    assert.equal(
+      await page.getByRole('button', { name: '조금 더 생각해볼게요 · 최대 7일 보류', exact: true }).count(),
+      0,
+    );
+    await click('Bye 안 살래요');
+    await click('확정하기');
+    await page.getByText('시뮬레이션 종료 후 포기할 수 있습니다.', { exact: true }).waitFor();
+    assert.equal(items[0].decision, undefined);
+    assert.equal(items.length, 2);
+    await shot('EarlyBye-rejected');
+    await click('뒤로');
+    await page.getByRole('button', { name: '물건 등록', exact: true }).waitFor();
+    await click('1분 만에 답하기');
+    await click('답변 완료 · 수정하기');
+    assert.equal(
+      await page.getByRole('textbox', { name: '숫자 답변 (0 ~ 30)', exact: true }).inputValue(),
+      '12',
+    );
+    await click('뒤로');
+    await page.getByRole('button', { name: '답변 완료 · 수정하기', exact: true }).waitFor();
+    await click('뒤로');
+    await page.getByRole('button', { name: '물건 등록', exact: true }).waitFor();
+    // Future server acceptance uses the same request and success navigation.
+    rejectEarlyBye = false;
+    await click('사진 2 상품 기록 보기');
+    await click('Bye 안 살래요');
+    await click('확정하기');
+    await page.getByRole('button', { name: '물건 등록', exact: true }).waitFor();
+    assert.equal(items[1].decision, 'GIVE_UP');
     // Finished simulation keeps the API summary and the Buy/Bye confirmation contract.
     items[0].simulation.status = 'COMPLETED';
     await click('사진 1 상품 기록 보기');

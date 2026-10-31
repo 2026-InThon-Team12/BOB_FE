@@ -17,23 +17,36 @@ const DURATION = 1900;
 const FALL = 90;
 const useNativeDriver = Platform.OS !== 'web';
 
-type Piece = { t: Animated.Value; dx: number; dy: number; color: string; size: number; burst: number; spin: number };
+type Piece = {
+  t: Animated.Value;
+  dx: number;
+  dy: number;
+  color: string;
+  size: number;
+  burst: number;
+  spin: number;
+};
 
 const useStyles = makeStyles((t) => ({
   layer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   piece: { position: 'absolute', top: 0, borderRadius: t.space[1] / 2 },
 }));
 
-export function Confetti({ replay, originY }: { replay: number; originY: number }) {
+export function Confetti({ originY }: { originY: number }) {
   const theme = useTheme();
   const styles = useStyles();
   const [width, setWidth] = useState(0);
   const [reduced, setReduced] = useState(false);
   const [pieces] = useState<Piece[]>(() => {
-    const colors = [theme.color.brand.solid, theme.color.warning.solid, theme.color.gold, theme.color.success.solid];
+    const colors = [
+      theme.color.brand.solid,
+      theme.color.warning.solid,
+      theme.color.gold,
+      theme.color.success.solid,
+    ];
     return BURSTS.flatMap((_, burst) =>
       Array.from({ length: PER_BURST }, (__, i) => {
-        const angle = (-Math.PI / 2) + (Math.random() - 0.5) * Math.PI * 1.4;
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.4;
         const dist = 60 + Math.random() * 110;
         return {
           t: new Animated.Value(0),
@@ -68,7 +81,7 @@ export function Confetti({ replay, originY }: { replay: number; originY: number 
     );
     Animated.parallel(anims).start();
     return () => anims.forEach((a) => a.stop());
-  }, [replay, reduced, pieces]);
+  }, [reduced, pieces]);
 
   if (reduced) return null;
 
@@ -90,7 +103,12 @@ export function Confetti({ replay, originY }: { replay: number; originY: number 
                   { translateY: originY },
                   { translateX: p.t.interpolate({ inputRange: [0, 1], outputRange: [0, p.dx] }) },
                   // 퍼진 뒤 90px 떨어진다
-                  { translateY: p.t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, p.dy, p.dy + FALL] }) },
+                  {
+                    translateY: p.t.interpolate({
+                      inputRange: [0, 0.6, 1],
+                      outputRange: [0, p.dy, p.dy + FALL],
+                    }),
+                  },
                   { rotate: p.t.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${p.spin}deg`] }) },
                 ],
               },

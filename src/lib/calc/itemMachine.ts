@@ -23,9 +23,11 @@ export type DecisionAction = Exclude<ItemAction, 'review'>;
 /** 시뮬레이션 첫날 (로컬 날짜 키) */
 export const simulationStartDay = (item: Item) => dateKeyOf(item.simulation.startAt);
 /** 시뮬레이션 마지막 날 다음 날 = 결정 가능일 */
-export const simulationEndDay = (item: Item) => addDays(simulationStartDay(item), item.simulation.durationDays);
+export const simulationEndDay = (item: Item) =>
+  addDays(simulationStartDay(item), item.simulation.durationDays);
 /** 오늘이 시뮬레이션 며칠째인지 (첫날 1) */
-export const simulationDayNumber = (item: Item, today: string) => diffDays(simulationStartDay(item), today) + 1;
+export const simulationDayNumber = (item: Item, today: string) =>
+  diffDays(simulationStartDay(item), today) + 1;
 /** 결정 가능일까지 남은 일수 (오늘 포함하지 않음, 0이면 결과 도착) */
 export const daysLeft = (item: Item, today: string) => Math.max(0, diffDays(today, simulationEndDay(item)));
 /** 구매 후 점검 가능일 */
@@ -48,8 +50,8 @@ export function derivePhase(item: Item, today: string, policy: Pick<Policy, 'rev
 
 /** 단계별로 가능한 행동 */
 const ACTIONS: Record<ItemPhase, ItemAction[]> = {
-  // 진행 중에도 포기는 언제든 가능
-  simulating: ['abandon'],
+  // 진행 중에도 구매하거나 포기할 수 있다
+  simulating: ['buy', 'abandon'],
   awaitingDecision: ['buy', 'abandon', 'hold'],
   bought: [],
   awaitingReview: ['review'],

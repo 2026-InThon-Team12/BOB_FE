@@ -8,10 +8,21 @@ jest.mock('expo/fetch', () => ({ fetch: (...args: Parameters<typeof fetch>) => g
 jest.mock('expo-file-system', () => ({
   File: class {
     uri: string;
-    constructor(uri: string) { this.uri = uri; }
-    get name() { return this.uri.split('/').pop() ?? 'image.png'; }
-    get type() { return this.uri.endsWith('.png') ? 'image/png' : 'image/jpeg'; }
-    async bytes() { return new Uint8Array([137, 80, 78, 71]); }
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+    get exists() {
+      return true;
+    }
+    get name() {
+      return this.uri.split('/').pop() ?? 'image.png';
+    }
+    get type() {
+      return this.uri.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    }
+    async bytes() {
+      return new Uint8Array([137, 80, 78, 71]);
+    }
   },
 }));
 jest.mock('@react-native-async-storage/async-storage', () =>

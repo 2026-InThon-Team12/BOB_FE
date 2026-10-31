@@ -8,6 +8,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 
 import { env } from '@/config/env';
 import { policy } from '@/config/policy';
+import { copy } from '@/constants/copy';
 
 import { ApiError } from './errors';
 
@@ -18,7 +19,11 @@ export const API_PREFIX = '/api/v1';
  * 운영 설정에 잘못 들어간 `/docs`, `/api/v1`, `/docs/api/v1`도 안전하게 보정한다.
  */
 export const normalizeApiBaseUrl = (baseUrl: string) =>
-  baseUrl.trim().replace(/\/+$/, '').replace(/\/api\/v1$/i, '').replace(/\/docs$/i, '');
+  baseUrl
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/api\/v1$/i, '')
+    .replace(/\/docs$/i, '');
 
 export type ImageUpload = {
   uri: string;
@@ -54,7 +59,9 @@ export function toFormData({ field = 'image', upload }: NonNullable<RequestOptio
   } else {
     // SDK 58's expo/fetch cannot serialize RN's legacy { uri, name, type } object.
     // File exposes bytes(), which Expo's multipart encoder actually reads.
-    form.append(field, new File(upload.uri), name);
+    const file = new File(upload.uri);
+    if (!file.exists) throw new Error(copy.register.imageUnreadable);
+    form.append(field, file, name);
   }
   return form;
 }
@@ -77,18 +84,23 @@ export async function request(opts: RequestOptions): Promise<unknown> {
   const timer = setTimeout(() => controller.abort(), policy.ai.timeoutMs);
   const url = buildUrl(opts.path, opts.query);
   let res: Response;
+  let text: string;
   try {
     res = await expoFetch(url, { method: opts.method, headers, body, signal: controller.signal });
+    text = await res.text();
   } catch (e) {
     const aborted = controller.signal.aborted || (e instanceof Error && e.name === 'AbortError');
-    const error = new ApiError(aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.', aborted ? 'timeout' : 'network');
-    error.cause = e;
-    throw error;
+    throw new ApiError(
+      aborted ? '응답 시간이 초과됐어요.' : '네트워크 오류예요.',
+      aborted ? 'timeout' : 'network',
+      undefined,
+      undefined,
+      { cause: e },
+    );
   } finally {
     clearTimeout(timer);
   }
 
-  const text = await res.text();
   let data: unknown = undefined;
   if (text) {
     try {

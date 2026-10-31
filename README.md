@@ -3,6 +3,9 @@
 UI는 `BoB_handoff/prototype/*.html`, 기능은 `BOB_ANDROID` APK의 API·저장 동작을 기준으로 구현하는 브랜치입니다.
 원래 `feat/frontend-mvp` 및 `fix/expo-cart-upload-review` 브랜치는 변경하지 않습니다.
 
+`feat/frontend-mvp`의 사진 전송 보강과 상호작용 변경을 이 구조에 통합했습니다. [통합 내역](docs/frontend-mvp-integration.md)을 참고하세요.
+기간 중 Bye 버튼도 반영했지만, 실제 확정에는 [백엔드 후속 수정](docs/backend-early-bye.md)이 필요합니다. 이번 작업에서 백엔드는 변경하지 않았습니다.
+
 ## 실행
 
 ```bash

@@ -18,7 +18,12 @@ describe('fallback', () => {
   });
 
   it('질문은 카테고리 기본 템플릿', async () => {
-    const qs = await fallbackAi.personalizeQuestions({ name: '의자', price: 1, category: 'hobby', reasons: [] });
+    const qs = await fallbackAi.personalizeQuestions({
+      name: '의자',
+      price: 1,
+      category: 'hobby',
+      reasons: [],
+    });
     expect(qs.length).toBeGreaterThan(0);
   });
 });
@@ -36,13 +41,22 @@ describe('withFallback', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const ai = withFallback(failing, fallbackAi);
     await expect(ai.classifyCategory({ name: '캠핑 랜턴' })).resolves.toMatchObject({ category: 'hobby' });
-    await expect(ai.parseCartScreenshot({ uri: 'x' })).rejects.toMatchObject({ code: 'network', message: 'x' });
+    await expect(ai.parseCartScreenshot({ uri: 'x' })).rejects.toMatchObject({
+      code: 'network',
+      message: 'x',
+    });
     warn.mockRestore();
   });
 
   it('원격 호출이 성공하면 그 결과를 쓴다', async () => {
-    const ai = withFallback({ ...failing, classifyCategory: async () => ({ category: 'food', confidence: 1 }) }, fallbackAi);
-    await expect(ai.classifyCategory({ name: '캠핑 의자' })).resolves.toEqual({ category: 'food', confidence: 1 });
+    const ai = withFallback(
+      { ...failing, classifyCategory: async () => ({ category: 'food', confidence: 1 }) },
+      fallbackAi,
+    );
+    await expect(ai.classifyCategory({ name: '캠핑 의자' })).resolves.toEqual({
+      category: 'food',
+      confidence: 1,
+    });
   });
 });
 
@@ -54,7 +68,10 @@ describe('real mappers', () => {
     expect(toCategory('digital')).toBe('digital');
     expect(toCategory('디지털기기')).toBe('digital');
     expect(toCategory('없는값')).toBeUndefined();
-    expect(mapCategory({ category: '모르는 분류', confidence: 0.9 })).toEqual({ category: 'etc', confidence: 0 });
+    expect(mapCategory({ category: '모르는 분류', confidence: 0.9 })).toEqual({
+      category: 'etc',
+      confidence: 0,
+    });
   });
 
   it('OpenAPI DraftAnalysis에서 카테고리를 꺼낸다', () => {
@@ -158,14 +175,69 @@ describe('real mappers', () => {
     ).toMatchObject({ name: '기계식 키보드', category: 'digital', source: 'link', sourceUrl });
   });
 
+  it('vision 상품 이미지 crop을 로컬에서 표시할 수 있는 data URI로 변환한다', () => {
+    const imageCrop = {
+      mime_type: 'image/jpeg',
+      base64: '/9j/2Q==',
+      width: 100,
+      height: 80,
+      box: [0, 0, 1000, 1000],
+    };
+    const result = mapCartScreenshot({
+      items: [{ name: '키보드', price: 30000, image_url: null, image_crop: imageCrop }],
+      analysis_method: 'vision',
+    });
+    expect(result.items[0].imageUri).toBe('data:image/jpeg;base64,/9j/2Q==');
+  });
+
+  it('상품 이미지 URL이 있으면 crop보다 우선한다', () => {
+    const result = mapCartScreenshot({
+      items: [
+        {
+          name: '키보드',
+          image_url: 'https://example.com/keyboard.jpg',
+          image_crop: { mime_type: 'image/jpeg', base64: '/9j/2Q==' },
+        },
+      ],
+      analysis_method: 'vision',
+    });
+    expect(result.items[0].imageUri).toBe('https://example.com/keyboard.jpg');
+  });
+
+  it.each([
+    null,
+    {},
+    { mime_type: 'image/svg+xml', base64: 'PHN2Zz4=' },
+    { mime_type: 'image/jpeg', base64: '' },
+    { mime_type: 'image/jpeg', base64: 'invalid base64' },
+    { mime_type: 'image/jpeg', base64: '/9j/2Q=' },
+  ])('crop이 없거나 잘못돼도 이름과 가격은 유지한다: %j', (imageCrop) => {
+    const result = mapCartScreenshot({
+      items: [{ name: '키보드', price: 30000, image_crop: imageCrop }],
+      analysis_method: 'vision',
+    });
+    expect(result.items[0]).toMatchObject({ name: '키보드', price: 30000, imageUri: undefined });
+  });
+
   it('형식이 다르면 invalid_response', () => {
     expect(() => mapCartScreenshot({ wrong: true })).toThrow(AiRequestError);
-    expect(() => mapQuestions([{ text: 'q', options: [{ label: 'a', countsAsUse: true }] }])).toThrow(AiRequestError);
+    expect(() => mapQuestions([{ text: 'q', options: [{ label: 'a', countsAsUse: true }] }])).toThrow(
+      AiRequestError,
+    );
   });
 
   it('질문: 모르는 kind는 기본값, variant 기본 normal', () => {
     const [q] = mapQuestions({
-      questions: [{ text: '오늘?', kind: 'weird', options: [{ label: '예', countsAsUse: true }, { label: '아니오', countsAsUse: false }] }],
+      questions: [
+        {
+          text: '오늘?',
+          kind: 'weird',
+          options: [
+            { label: '예', countsAsUse: true },
+            { label: '아니오', countsAsUse: false },
+          ],
+        },
+      ],
     });
     expect(q).toMatchObject({ kind: 'need_moment', variant: 'normal' });
   });
@@ -189,7 +261,12 @@ describe('real (BE 공유 API 기준)', () => {
     ).rejects.toBeInstanceOf(AiUnavailableError);
 
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    const qs = await withFallback(realAi, fallbackAi).personalizeQuestions({ name: '의자', price: 1, category: 'hobby', reasons: [] });
+    const qs = await withFallback(realAi, fallbackAi).personalizeQuestions({
+      name: '의자',
+      price: 1,
+      category: 'hobby',
+      reasons: [],
+    });
     expect(qs.length).toBeGreaterThan(0);
     warn.mockRestore();
   });

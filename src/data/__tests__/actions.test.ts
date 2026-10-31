@@ -69,8 +69,10 @@ describe('물품 등록', () => {
 });
 
 describe('결정 흐름', () => {
-  it('기간 중에는 구매 불가, 포기는 가능', () => {
+  it('기간 중에도 구매와 포기가 가능', () => {
     const [a, b] = addItems([input(), input({ name: '조명' })]);
+    expect(decideItem(a.id, 'buy').status).toBe('bought');
+    expect(Object.values(getState().expenses).filter((e) => e.refId === a.id)).toHaveLength(1);
     expectCode(() => decideItem(a.id, 'buy'), 'invalid_transition');
     expect(decideItem(b.id, 'abandon').status).toBe('abandoned');
   });
@@ -89,12 +91,17 @@ describe('결정 흐름', () => {
     const reviewed = submitReview(item.id, { usageBucket: 'sometimes' });
     expect(reviewed.review).toMatchObject({ usageBucket: 'sometimes', usedDays: 2.5 });
     // 점검 답은 고칠 수 있다
-    expect(submitReview(item.id, { usageBucket: 'daily' }).review).toMatchObject({ usageBucket: 'daily', usedDays: 12 });
+    expect(submitReview(item.id, { usageBucket: 'daily' }).review).toMatchObject({
+      usageBucket: 'daily',
+      usedDays: 12,
+    });
   });
 
   it('보류 = 7일 연장, 지금까지의 답은 유지하고 다시 질문을 받는다', () => {
     const [item] = addItems([input()]);
-    const q = Object.values(getState().questions).find((x) => x.itemId === item.id && x.variant === 'normal')!;
+    const q = Object.values(getState().questions).find(
+      (x) => x.itemId === item.id && x.variant === 'normal',
+    )!;
     answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[0].id });
     shiftClock(7);
     const held = decideItem(item.id, 'hold');
@@ -104,14 +111,16 @@ describe('결정 흐름', () => {
     // 연장된 기간 안이므로 오늘도 답할 수 있다
     answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[1].id });
     expect(Object.values(getState().answers)).toHaveLength(2);
-    expectCode(() => decideItem(item.id, 'buy'), 'invalid_transition');
+    expect(decideItem(item.id, 'buy').status).toBe('bought');
   });
 });
 
 describe('매일 답변', () => {
   it('하루 한 개, 다시 답하면 바뀐다', () => {
     const [item] = addItems([input()]);
-    const q = Object.values(getState().questions).find((x) => x.itemId === item.id && x.variant === 'normal')!;
+    const q = Object.values(getState().questions).find(
+      (x) => x.itemId === item.id && x.variant === 'normal',
+    )!;
     answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[0].id });
     const second = answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[1].id });
     const answers = Object.values(getState().answers);
@@ -122,10 +131,16 @@ describe('매일 답변', () => {
   it('다른 물품의 질문, 없는 선택지, 기간 밖은 거부', () => {
     const [a, b] = addItems([input(), input({ name: '조명' })]);
     const qa = Object.values(getState().questions).find((x) => x.itemId === a.id)!;
-    expectCode(() => answerToday({ itemId: b.id, questionId: qa.id, optionId: qa.options[0].id }), 'invalid_input');
+    expectCode(
+      () => answerToday({ itemId: b.id, questionId: qa.id, optionId: qa.options[0].id }),
+      'invalid_input',
+    );
     expectCode(() => answerToday({ itemId: a.id, questionId: qa.id, optionId: 'nope' }), 'invalid_input');
     shiftClock(7);
-    expectCode(() => answerToday({ itemId: a.id, questionId: qa.id, optionId: qa.options[0].id }), 'invalid_transition');
+    expectCode(
+      () => answerToday({ itemId: a.id, questionId: qa.id, optionId: qa.options[0].id }),
+      'invalid_transition',
+    );
   });
 
   it('물품을 지우면 질문·답변·구매 지출도 지운다', () => {
@@ -145,7 +160,11 @@ describe('매일 답변', () => {
 
 describe('목표 · 참기 · 지출', () => {
   it('새 목표를 만들면 이전 목표는 비활성', () => {
-    const first = createGoal({ name: '피규어', price: 280_000, productUrl: '  https://shop.example.com/figure  ' });
+    const first = createGoal({
+      name: '피규어',
+      price: 280_000,
+      productUrl: '  https://shop.example.com/figure  ',
+    });
     const second = createGoal({ name: '여행', price: 500_000 });
     const goals = getState().goals;
     expect(goals[first.id].isActive).toBe(false);

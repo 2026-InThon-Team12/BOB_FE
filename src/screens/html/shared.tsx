@@ -29,6 +29,7 @@ import { apkCategories, apkCopy as c, apkMoney as money, apkTabs, apkTitles } fr
 import { htmlCopy as h } from '@/constants/htmlCopy';
 import type { useApk } from '@/features/apklike/useApk';
 import { num, object, seoulDate, str, type Json } from '@/lib/apkDomain';
+import { storedCropUri } from '@/lib/imageCrop';
 import { makeStyles, useTheme } from '@/theme';
 
 export type VM = ReturnType<typeof useApk>;
@@ -346,7 +347,7 @@ export function HtmlScreen({
             </Text>
           )}
           {vm.page === 'home' ? (
-            <IconButton name="bell" label={c.settings} onPress={() => vm.go('settings')} />
+            <IconButton name="settings" label={c.settings} onPress={() => vm.go('settings')} />
           ) : vm.page === 'goalDone' ? (
             <IconButton name="close" label={c.close} onPress={back} />
           ) : (
@@ -485,13 +486,23 @@ export function Stat({ label, value }: { label: string; value: unknown }) {
     </Row>
   );
 }
-export function Product({ item, crop, compact = false, prominentPrice = false }: { item: Json; crop?: string; compact?: boolean; prominentPrice?: boolean }) {
+export function Product({
+  item,
+  crop,
+  compact = false,
+  prominentPrice = false,
+}: {
+  item: Json;
+  crop?: string;
+  compact?: boolean;
+  prominentPrice?: boolean;
+}) {
   const s = useHtmlStyles();
   return (
     <View style={compact ? s.compactCard : undefined}>
       <Row gap={3}>
         <Thumbnail
-          uri={crop ? `data:image/jpeg;base64,${crop}` : str(item.image_url) || undefined}
+          uri={str(item.image_url) || storedCropUri(crop)}
           size="sm"
           placeholder={copy.common.imagePlaceholder}
         />

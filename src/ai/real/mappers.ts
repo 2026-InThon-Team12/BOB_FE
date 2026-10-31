@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import { CATEGORY_LABELS } from '@/constants/categories';
+import { cropImageUri } from '@/lib/imageCrop';
 import {
   CATEGORY_IDS,
   DiscountRuleSchema,
@@ -30,10 +31,9 @@ const API_CATEGORY_TO_ID: Record<string, CategoryId> = {
   FOOD: 'food',
   OTHER: 'etc',
 };
-const LABEL_TO_ID = Object.fromEntries(Object.entries(CATEGORY_LABELS).map(([id, label]) => [label, id])) as Record<
-  string,
-  CategoryId
->;
+const LABEL_TO_ID = Object.fromEntries(
+  Object.entries(CATEGORY_LABELS).map(([id, label]) => [label, id]),
+) as Record<string, CategoryId>;
 export function toCategory(value: unknown): CategoryId | undefined {
   if (typeof value !== 'string') return undefined;
   const normalized = value.trim();
@@ -80,19 +80,21 @@ const DraftAnalysisDto = z.object({
 const CategoryDto = z.object({ category: z.string(), confidence: Confidence });
 export function mapCategory(data: unknown): CategoryGuess {
   const analysis = DraftAnalysisDto.safeParse(data);
-  const dto = analysis.success
-    ? analysis.data.items[0]
-    : parse(CategoryDto, data, '카테고리 인식');
+  const dto = analysis.success ? analysis.data.items[0] : parse(CategoryDto, data, '카테고리 인식');
   if (!dto) throw new AiRequestError('카테고리 인식 결과가 비어 있어요.', 'invalid_response');
   const category = toCategory(dto.category);
   const confidence = 'confidence' in dto ? dto.confidence : undefined;
   return category ? { category, confidence: confidence ?? 0.5 } : { category: 'etc', confidence: 0 };
 }
 
-const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sourceUrl?: string): ItemDraft => ({
+const toDraft = (
+  dto: z.infer<typeof DraftDto>,
+  source: ItemDraft['source'],
+  sourceUrl?: string,
+): ItemDraft => ({
   name: dto.name.trim(),
   price: dto.price,
-  imageUri: dto.image_url ?? dto.imageUrl ?? undefined,
+  imageUri: dto.image_url ?? dto.imageUrl ?? cropImageUri(dto.image_crop),
   category: toCategory(dto.category),
   // OpenAPI에는 confidence가 없으므로, AI 추천 표시를 위한 중립값을 사용한다.
   categoryConfidence: toCategory(dto.category) ? (dto.confidence ?? 0.5) : undefined,
@@ -127,7 +129,11 @@ const QuestionDto = z.object({
   options: z.array(z.object({ label: z.string().min(1), countsAsUse: z.boolean() })).min(2),
 });
 export function mapQuestions(data: unknown): QuestionTemplate[] {
-  const list = parse(z.union([z.array(QuestionDto), z.object({ questions: z.array(QuestionDto) })]), data, '질문 생성');
+  const list = parse(
+    z.union([z.array(QuestionDto), z.object({ questions: z.array(QuestionDto) })]),
+    data,
+    '질문 생성',
+  );
   return (Array.isArray(list) ? list : list.questions).map((q) => {
     const kind = QuestionKindSchema.safeParse(q.kind);
     return {

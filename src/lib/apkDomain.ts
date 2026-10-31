@@ -1,14 +1,21 @@
 /** BOB_ANDROID Domain.kt contract. Server owns items and financial calculations. */
+import { cropImageUri } from './imageCrop';
 export type Json = Record<string, unknown>;
-export const object = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : {});
+export const object = (v: unknown): Json =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Json) : {};
 export const rows = (v: unknown): Json[] => (Array.isArray(v) ? v.map(object) : []);
 export const str = (v: unknown): string => (v == null ? '' : String(v));
 export const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v) || 0);
 export const seoulDate = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
 export const validMoney = (v: unknown, positive = true) =>
-  /^\d+$/.test(str(v)) && Number.isSafeInteger(Number(v)) && Number(v) >= (positive ? 1 : 0) && Number(v) <= 1e12;
+  /^\d+$/.test(str(v)) &&
+  Number.isSafeInteger(Number(v)) &&
+  Number(v) >= (positive ? 1 : 0) &&
+  Number(v) <= 1e12;
 export const validDate = (v: string) =>
-  /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v;
+  /^\d{4}-\d{2}-\d{2}$/.test(v) &&
+  Number.isFinite(Date.parse(v)) &&
+  new Date(v).toISOString().slice(0, 10) === v;
 export type Draft = {
   name: string;
   price: string;
@@ -29,7 +36,7 @@ export const newDraft = (input: Json = {}): Draft => ({
   source: str(input.source) || 'MANUAL',
   source_url: str(input.source_url),
   image_url: str(input.image_url),
-  crop: str(object(input.image_crop).base64),
+  crop: cropImageUri(input.image_crop) ?? '',
   reasons: [],
   other: '',
   deadline: '',

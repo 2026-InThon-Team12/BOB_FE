@@ -1,3 +1,7 @@
+import { File } from 'expo-file-system';
+import { Platform } from 'react-native';
+import { policy } from '@/config/policy';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ApiError, bobApi, buildUrl, ensureGuestSession, extractToken, normalizeApiBaseUrl } from '@/api';
@@ -182,6 +186,53 @@ describe('엔드포인트', () => {
     expect(calls[0].init.body).toBeInstanceOf(FormData);
     expect(header(calls[0], 'Content-Type')).toBeUndefined();
   });
+
+  it('웹에서는 선택한 Blob과 파일 이름을 그대로 보낸다', async () => {
+    const originalOS = Platform.OS;
+    const append = jest.spyOn(FormData.prototype, 'append');
+    try {
+      Platform.OS = 'web';
+      const file = new Blob(['png'], { type: 'image/png' });
+      await bobApi.cartExtractions.create({ uri: 'blob:cart', name: 'cart.png', file });
+      expect(append).toHaveBeenCalledWith('image', file, 'cart.png');
+      expect(header(calls[0], 'Content-Type')).toBeUndefined();
+    } finally {
+      Platform.OS = originalOS;
+      append.mockRestore();
+    }
+  });
+
+  it('캐시 파일이 없으면 전송 전에 사진 오류를 표시한다', async () => {
+    const exists = jest.spyOn(File.prototype, 'exists', 'get').mockReturnValue(false);
+    await expect(bobApi.cartExtractions.create({ uri: 'file:///missing.png' })).rejects.toThrow(
+      '사진을 열 수 없어요',
+    );
+    expect(calls).toHaveLength(0);
+    exists.mockRestore();
+  });
+
+  it.each([false, true])(
+    'expo/fetch의 요청·본문 수신 중단을 시간 초과로 구분한다 (headers=%s)',
+    async (headersReceived) => {
+      jest.useFakeTimers();
+      const failure = new Error('The operation was aborted');
+      globalThis.fetch = jest.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+        const pending = new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(failure));
+        });
+        return headersReceived
+          ? Promise.resolve({ ok: true, status: 200, text: () => pending } as unknown as Response)
+          : pending;
+      });
+      try {
+        const result = expect(bobApi.items.list()).rejects.toMatchObject({ code: 'timeout', cause: failure });
+        await jest.advanceTimersByTimeAsync(policy.ai.timeoutMs);
+        await result;
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
 
   it('품목 일괄 등록은 Idempotency-Key를 보낸다', async () => {
     await bobApi.items.batchCreate({ items: [{ name: '키보드' }] }, 'reg_12345678');

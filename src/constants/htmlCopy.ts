@@ -48,6 +48,7 @@ export const htmlCopy = {
   comparison: '예측 vs 실제',
   resultTitle: '시뮬레이션 결과',
   resultDecision: '이제, 정해볼까요?',
+  earlyDecision: '아직 시뮬레이션 중이에요. 마음을 정했다면 지금 Buy·Bye를 선택해도 좋아요.',
   resultSummary: '응답 요약',
   resultObserved: '응답한 날',
   resultExpected: '30일 중',

@@ -1,6 +1,7 @@
 import { apkActions, useApkState } from '@/data/apkStore';
 import { apkRepository as repo } from '@/data/apkRepository';
 import { newDraft, type Json } from '@/lib/apkDomain';
+import { ApiError } from '@/api';
 
 const initial = useApkState.getState();
 beforeEach(() => {
@@ -10,6 +11,36 @@ beforeEach(() => {
   jest.spyOn(repo, 'persist').mockResolvedValue();
 });
 afterEach(() => jest.restoreAllMocks());
+
+it('preserves server items and local answers when early Bye is rejected by the current backend', async () => {
+  const item = { id: 'in-progress', simulation: { id: 'sim', status: 'ACTIVE' } };
+  const records = { today: { answer: { number_value: 3 } } };
+  repo.local.records = records;
+  useApkState.setState({ selected: item, home: { simulations: [item] }, records });
+  const request = jest.spyOn(repo, 'request').mockRejectedValue(
+    new ApiError('not complete', 'http', 409, {
+      error: { code: 'SIMULATION_NOT_COMPLETE', message: '시뮬레이션 종료 후 포기할 수 있습니다.' },
+    }),
+  );
+  expect(await apkActions.decide('GIVE_UP', '')).toBe(false);
+  expect(request).toHaveBeenCalledWith('PUT', '/items/in-progress/decision', { decision: 'GIVE_UP' }, true);
+  expect(useApkState.getState().home.simulations).toEqual([item]);
+  expect(repo.local.records).toEqual(records);
+  expect(useApkState.getState().error).toContain('시뮬레이션 종료');
+});
+
+it('uses the same server decision and home refresh after early Bye is accepted', async () => {
+  useApkState.setState({ selected: { id: 'in-progress', simulation: { status: 'ACTIVE' } } });
+  const request = jest
+    .spyOn(repo, 'request')
+    .mockImplementation(async (_method, path) =>
+      path === '/home' ? { simulations: [], goal: { saved_amount: 1000 } } : { decision: 'GIVE_UP' },
+    );
+  expect(await apkActions.decide('GIVE_UP', '')).toBe(true);
+  expect(request).toHaveBeenCalledWith('PUT', '/items/in-progress/decision', { decision: 'GIVE_UP' }, true);
+  expect(useApkState.getState().home.simulations).toEqual([]);
+  expect(useApkState.getState().goal.saved_amount).toBe(1000);
+});
 
 it('home and wallet display server results rather than the old local store', async () => {
   const request = jest.spyOn(repo, 'request').mockImplementation(async (_method, path) => {

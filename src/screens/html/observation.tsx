@@ -296,24 +296,22 @@ export function Result({ vm }: { vm: VM }) {
                 onPress={() => setDecision('BUY')}
               />
             </Stack>
-            {complete && (
-              <Stack flex={1}>
-                <Button
-                  label={h.resultBye}
-                  sublabel={h.resultByeSub}
-                  variant="bye"
-                  fullWidth
-                  disabled={vm.busy}
-                  onPress={() => setDecision('GIVE_UP')}
-                />
-              </Stack>
-            )}
+            <Stack flex={1}>
+              <Button
+                label={h.resultBye}
+                sublabel={h.resultByeSub}
+                variant="bye"
+                fullWidth
+                disabled={vm.busy}
+                onPress={() => setDecision('GIVE_UP')}
+              />
+            </Stack>
           </Row>
           {complete ? (
             <Action vm={vm} label={h.resultHold} secondary run={() => setDecision('HOLD')} />
           ) : (
             <Text variant="caption" tone="tertiary">
-              {c.earlyBuy}
+              {h.earlyDecision}
             </Text>
           )}
         </>

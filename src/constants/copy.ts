@@ -65,7 +65,8 @@ export const copy = {
     legendActual: '실제',
     days: (n: number) => `${Math.round(n)}일`,
     badge: {
-      over: (ratio: number) => (Number.isFinite(ratio) ? `${formatRatio(ratio)}배 과대예측` : '안 쓰고 있어요'),
+      over: (ratio: number) =>
+        Number.isFinite(ratio) ? `${formatRatio(ratio)}배 과대예측` : '안 쓰고 있어요',
       slight: (ratio: number) => `${formatRatio(ratio)}배`,
       accurate: '거의 정확',
     },
@@ -129,7 +130,8 @@ export const copy = {
     screenshotTitle: '장바구니 스크린샷',
     screenshotBody: '쇼핑앱 장바구니를 캡처해 올리면 품목명과 가격을 한 번에 읽어와요.',
     linkTitle: '쇼핑앱에서 공유하기',
-    linkBody: '상품 페이지 링크를 붙여 넣으면 이름·이미지·가격을 불러와요. 가격이 안 보이면 직접 적어 주세요.',
+    linkBody:
+      '상품 페이지 링크를 붙여 넣으면 이름·이미지·가격을 불러와요. 가격이 안 보이면 직접 적어 주세요.',
     manualTitle: '직접 입력',
     manualBody: '이름과 가격만 적으면 돼요.',
     otherTitle: '이런 순간엔 다른 방법이 더 잘 맞아요',
@@ -137,7 +139,8 @@ export const copy = {
     otherImpulseBody: '목표가 며칠 늦어지는지 바로 보여 드려요',
     // 스크린샷
     pickTitle: '장바구니 캡처를 골라 주세요',
-    pickBody: '쇼핑앱 장바구니 화면을 캡처한 이미지를 올리면 품목을 찾아 드려요. 이미지는 인식에만 쓰고 저장하지 않아요.',
+    pickBody:
+      '쇼핑앱 장바구니 화면을 캡처한 이미지를 올리면 품목을 찾아 드려요. 이미지는 인식에만 쓰고 저장하지 않아요.',
     pickButton: '사진 고르기',
     analyzing: '장바구니를 읽고 있어요',
     analyzingBody: '품목명·가격·카테고리를 한 번에 찾는 중이에요.',
@@ -184,7 +187,8 @@ export const copy = {
     categoryLoading: 'AI가 카테고리를 고르는 중…',
     removeRow: '이 품목 빼기',
     addRow: '품목 추가',
-    bandsNote: '시뮬레이션 기간은 가격에 따라 정해져요 · 3만 원 이하 3일 · 10만 원 미만 7일 · 10만 원 이상 14일',
+    bandsNote:
+      '시뮬레이션 기간은 가격에 따라 정해져요 · 3만 원 이하 3일 · 10만 원 미만 7일 · 10만 원 이상 14일',
     registerButton: (n: number) => (n > 1 ? `${n}개 등록하고 이유 고르기` : '등록하고 이유 고르기'),
     registerNone: '등록할 품목을 골라 주세요',
     // 이유
@@ -219,7 +223,8 @@ export const copy = {
   check: {
     title: '오늘의 질문',
     close: '오늘의 질문 닫기',
-    meta: (category: string, day: number, total: number) => `${category} · 시뮬레이션 ${day}일째 / ${total}일`,
+    meta: (category: string, day: number, total: number) =>
+      `${category} · 시뮬레이션 ${day}일째 / ${total}일`,
     imagine: '이 물건을 이미 샀다고 생각해 보세요',
     emphasis: (category: string, ratio: number) =>
       `${josa(category, '은/는')} 지난번 예측이 ${ratio.toFixed(1).replace(/\.0$/, '')}배 빗나갔어요. 이번엔 조금 더 꼼꼼히 물어볼게요.`,
@@ -251,18 +256,20 @@ export const copy = {
     summaryTitle: '응답 요약',
     summary: {
       neverNeeded: () => "기간 내내 '있었어요'가 한 번도 없었어요.",
-      frontLoaded: (days: number) => `'있었어요'는 처음 ${days}일에 몰려 있었고, 그 뒤로는 '딱히 없었어요'가 이어졌어요.`,
-      backLoaded: (days: number) => `'있었어요'는 마지막 ${days}일에 몰려 있었어요. 최근 들어 필요해진 걸까요?`,
+      frontLoaded: (days: number) =>
+        `'있었어요'는 처음 ${days}일에 몰려 있었고, 그 뒤로는 '딱히 없었어요'가 이어졌어요.`,
+      backLoaded: (days: number) =>
+        `'있었어요'는 마지막 ${days}일에 몰려 있었어요. 최근 들어 필요해진 걸까요?`,
       steady: () => '기간 내내 꾸준히 필요했던 물건이에요.',
       mixed: (yes: number, no: number) => `'있었어요'는 ${yes}일, '딱히 없었어요'는 ${no}일이었어요.`,
-      mostlyUnsure: (count: number) => `'잘 모르겠어요'가 ${count}번이었어요. 정말 필요한지 확신이 없었던 것 같아요.`,
+      mostlyUnsure: (count: number) =>
+        `'잘 모르겠어요'가 ${count}번이었어요. 정말 필요한지 확신이 없었던 것 같아요.`,
       missed: (count: number) => `답하지 않은 날이 ${count}일 있어요.`,
     },
     reasonWarning: (reason: string, rate: number) =>
       `${josa(reason, '으로/로')} 등록한 물건은 지금까지 ${Math.round(rate * 100)}%를 포기했어요.`,
     ask: '살까요, 보낼까요?',
-    inProgress: (left: number) => `아직 ${left}일 남았어요. 끝까지 지켜본 뒤에 정해요.`,
-    giveUpEarly: '지금 그만 볼래요',
+    inProgress: (left: number) => `아직 ${left}일 남았어요. 마음을 정했다면 지금 선택해도 좋아요.`,
     boughtTitle: '살게요로 기록했어요',
     boughtBody: (days: number) => `${days}일 뒤에 실제로 얼마나 썼는지 물어볼게요.`,
     boughtToast: (days: number) => `구매로 기록했어요. ${days}일 뒤에 얼마나 썼는지 물어볼게요`,
@@ -358,7 +365,6 @@ export const copy = {
     buy: '사러 가기',
     next: '다음 목표 정하기',
     close: '닫기',
-    replay: '축하 다시 보기',
   },
   impulse: {
     title: '지금 뭘 사려고 하나요?',
@@ -489,7 +495,9 @@ ${josa(name, '을/를')} 며칠 사용했나요?`,
     entry: '개발자 도구 열기',
     clockTitle: '시간 이동',
     clockStatus: (today: string, offset: number) =>
-      offset === 0 ? `오늘: ${today} (실제 날짜)` : `오늘: ${today} (실제보다 ${offset > 0 ? '+' : ''}${offset}일)`,
+      offset === 0
+        ? `오늘: ${today} (실제 날짜)`
+        : `오늘: ${today} (실제보다 ${offset > 0 ? '+' : ''}${offset}일)`,
     clockReset: '실제 날짜로',
     dataTitle: '데이터',
     dataStatus: (items: number, answers: number) => `물품 ${items}개 · 답변 ${answers}개`,

@@ -6,8 +6,9 @@ export class ApiError extends Error {
     readonly status?: number,
     /** 서버가 보낸 오류 본문 (형식 미확정이라 그대로 보관) */
     readonly body?: unknown,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
     this.name = 'ApiError';
   }
 }
