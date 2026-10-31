@@ -1,6 +1,5 @@
 // https://docs.expo.dev/guides/using-eslint/
 const { defineConfig } = require('eslint/config');
-const { fixupConfigRules } = require('@eslint/compat');
 const expoConfig = require('eslint-config-expo/flat');
 
 /**
@@ -51,8 +50,7 @@ const aiInternals = {
 };
 
 module.exports = defineConfig([
-  // Expo의 React/import 플러그인은 ESLint 10의 규칙 API에 맞춰 실행한다.
-  ...fixupConfigRules(expoConfig),
+  ...expoConfig,
   {
     ignores: ['dist/*', '.expo/*', 'node_modules/*'],
   },

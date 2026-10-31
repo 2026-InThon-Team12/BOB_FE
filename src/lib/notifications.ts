@@ -2,7 +2,7 @@
  * 매일 저녁 체크 알림 (기기 로컬 알림 — 서버 푸시 아님).
  * 웹은 로컬 알림을 지원하지 않아 아무것도 하지 않는다 (홈 배너로 대신).
  */
-import * as Notifications from 'expo-notifications';
+import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 
 const REMINDER_ID = 'bob-daily-check';
@@ -11,9 +11,31 @@ const CHANNEL_ID = 'daily-check';
 export const notificationsSupported = Platform.OS !== 'web';
 
 let configured = false;
+type NotificationsModule = typeof import('expo-notifications');
+let notifications: NotificationsModule | null | undefined;
+
+// Optional native modules must not prevent Expo Router from loading the app.
+// Cache the result so an unsupported runtime does not retry on every item update.
+function loadNotifications(): NotificationsModule | null {
+  if (notifications !== undefined) return notifications;
+  // Some Expo Go runtimes omit this dependency of the notifications barrel.
+  // Check before evaluating it: Metro may report import-time exceptions even if caught.
+  if (!requireOptionalNativeModule('ExpoApplication')) {
+    notifications = null;
+    return null;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Load optional native code only inside this guarded call.
+    notifications = require('expo-notifications') as NotificationsModule;
+  } catch {
+    console.warn('[notifications] 이 실행 환경에서는 로컬 알림을 사용할 수 없어요.');
+    notifications = null;
+  }
+  return notifications;
+}
 
 /** 앱 실행 중에도 알림을 배너로 보여준다 */
-function configure() {
+function configure(Notifications: NotificationsModule) {
   if (configured || !notificationsSupported) return;
   configured = true;
   Notifications.setNotificationHandler({
@@ -26,7 +48,7 @@ function configure() {
   });
 }
 
-async function ensurePermission(): Promise<boolean> {
+async function ensurePermission(Notifications: NotificationsModule): Promise<boolean> {
   const current = await Notifications.getPermissionsAsync();
   if (current.granted) return true;
   if (!current.canAskAgain) return false;
@@ -45,18 +67,19 @@ export async function syncDailyReminder(params: {
   channelName: string;
 }): Promise<void> {
   if (!notificationsSupported) return;
-  configure();
+  const Notifications = loadNotifications();
+  if (!Notifications) return;
+  configure(Notifications);
   await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
-  if (!params.enabled || !(await ensurePermission())) return;
+  if (!params.enabled) return;
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: params.channelName,
-      // index.d.ts의 `export *`로 내보내지만 eslint import 플러그인이 따라가지 못한다 (tsc는 확인함)
-      // eslint-disable-next-line import/namespace
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
+  if (!(await ensurePermission(Notifications))) return;
   const [hour, minute] = params.time.split(':').map(Number);
   await Notifications.scheduleNotificationAsync({
     identifier: REMINDER_ID,

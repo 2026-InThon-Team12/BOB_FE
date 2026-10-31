@@ -7,13 +7,15 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@tanstack/react-query": "^5.105.0",
     "expo": "~58.0.21",
+    "expo-application": "~58.1.2",
     "expo-constants": "~58.0.14",
+    "expo-file-system": "~58.0.13",
     "expo-font": "~58.0.11",
     "expo-image-manipulator": "~58.0.16",
     "expo-image-picker": "~58.0.10",
     "expo-linking": "~58.0.15",
     "expo-notifications": "~58.1.7",
-    "expo-router": "~58.0.28",
+    "expo-router": "~58.0.29",
     "expo-status-bar": "~58.0.4",
     "lucide-react-native": "^1.66.0",
     "react": "19.3.0",
@@ -37,12 +39,13 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo start --go --android",
+    "ios": "expo start --go --ios",
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "start:go": "expo start --go"
   },
   "private": true,
   "engines": {

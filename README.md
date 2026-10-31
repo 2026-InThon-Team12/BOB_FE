@@ -30,10 +30,10 @@ BOB는 단순히 소비를 막는 앱이 아닙니다. 구매 전에는 물건�
 Node.js 24 LTS를 권장합니다. Expo SDK 58의 네이티브 패키지는 `npx expo install`로 호환 버전을 유지합니다.
 
 ```bash
-npm install
+npm ci
 ```
 
-ESLint 10은 `@eslint/compat`로 Expo의 기존 플러그인 규칙을 유지합니다.
+ESLint 9와 Expo의 flat config를 사용합니다.
 `package.json`의 제한된 `overrides`는 테스트 도구의 지원 종료 패키지를 제거하기 위한 것입니다.
 `test-exclude` 8은 오래된 `glob`·`inflight`를, `jsdom` 27은 `whatwg-encoding`을 대체합니다.
 jsdom은 Jest 30이 사용하는 `ResourceLoader` API가 유지되는 버전을 사용합니다.
@@ -82,9 +82,30 @@ FE는 서버가 제공한 `image_url` 또는 검증된 `image_crop`을 표시합
 
 ### 3. 앱 실행
 
+실제 휴대폰에서는 **SDK 58을 지원하는 Expo Go**를 사용합니다.
+PC와 휴대폰을 같은 Wi-Fi에 연결한 뒤 아래 명령으로 나온 QR 코드를
+Android의 Expo Go 스캐너 또는 iPhone 카메라로 읽습니다. 별도 BoB APK는 설치하지 않습니다.
+
+```powershell
+git switch feat/frontend-mvp
+git pull --ff-only origin feat/frontend-mvp
+npm.cmd ci
+npm.cmd run start:go -- --clear
+```
+
+다른 Metro 서버가 켜져 있다면 먼저 `Ctrl+C`로 종료하고 새 QR 코드를 사용합니다.
+학교·공용 Wi-Fi가 기기 간 통신을 막으면 `npm.cmd run start:go -- --tunnel`을 사용합니다.
+터널 도구를 처음 설치할 때 CLI가 설치 동의를 물을 수 있습니다.
+
+`Cannot find native module 'ExpoApplication'`가 나면 Expo Go의 지원 SDK와
+이 프로젝트의 SDK 58을 확인하고, 위의 `npm ci`와 캐시 초기화를 실행합니다.
+알림 모듈은 필요할 때만 불러오며, 사용할 수 없더라도 나머지 앱은 실행됩니다.
+기기 로컬 알림은 지원되는 환경에서 유지합니다. Android Expo Go의 **서버 푸시 수신은 지원되지 않으므로**
+이 QR 테스트의 범위에서 제외합니다. [Expo 알림 문서](https://docs.expo.dev/versions/v58.0.0/sdk/notifications/)
+
 ```bash
-# Expo 개발 서버
-npm start
+# Expo Go 개발 서버
+npm run start:go
 
 # 웹
 npm run web

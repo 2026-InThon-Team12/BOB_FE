@@ -148,19 +148,25 @@ describe('엔드포인트', () => {
   it('SDK 58의 실제 multipart 변환기로 파일 바이트를 전송한다', async () => {
     const { installFormDataPatch } = jest.requireActual('expo/src/winter/FormData');
     const { convertFormDataAsync } = jest.requireActual('expo/src/winter/fetch/convertFormData');
-    installFormDataPatch(FormData);
+    // Expo patches React Native's _parts-based FormData, not jsdom's browser implementation.
+    const NativeFormData = jest.requireActual('react-native/Libraries/Network/FormData').default;
+    const originalFormData = globalThis.FormData;
+    class TestFormData extends NativeFormData {}
+    globalThis.FormData = installFormDataPatch(TestFormData);
+    try {
+      const legacy = new FormData();
+      legacy.append('image', { uri: 'file:///cart.png', name: 'cart.png', type: 'image/png' } as unknown as Blob);
+      await expect(convertFormDataAsync(legacy)).rejects.toThrow('Unsupported FormDataPart implementation');
 
-    // 이전 URI 객체는 전송 전에 실패하여 인터넷 연결 오류로 잘못 표시됐다.
-    const legacy = new FormData();
-    legacy.append('image', { uri: 'file:///cart.png', name: 'cart.png', type: 'image/png' } as unknown as Blob);
-    await expect(convertFormDataAsync(legacy)).rejects.toThrow('Unsupported FormDataPart implementation');
-
-    await bobApi.cartExtractions.create({ uri: 'file:///cart.png', name: 'cart.png', mimeType: 'image/png' });
-    const { body } = await convertFormDataAsync(calls[0].init.body);
-    const multipart = new TextDecoder().decode(body);
-    expect(multipart).toContain('name="image"; filename="cart.png"');
-    expect(multipart).toContain('content-type: image/png');
-    expect(multipart).toContain('PNG');
+      await bobApi.cartExtractions.create({ uri: 'file:///cart.png', name: 'cart.png', mimeType: 'image/png' });
+      const { body } = await convertFormDataAsync(calls[0].init.body);
+      const multipart = new TextDecoder().decode(body);
+      expect(multipart).toContain('name="image"; filename="cart.png"');
+      expect(multipart).toContain('content-type: image/png');
+      expect(multipart).toContain('PNG');
+    } finally {
+      globalThis.FormData = originalFormData;
+    }
   });
 
   it('웹에서는 선택한 Blob과 파일 이름을 그대로 보낸다', async () => {
@@ -187,7 +193,7 @@ describe('엔드포인트', () => {
   it.each([false, true])('expo/fetch의 요청·본문 수신 중단을 시간 초과로 구분한다 (headers=%s)', async (headersReceived) => {
     jest.useFakeTimers();
     const failure = new Error('The operation was aborted');
-    globalThis.fetch = jest.fn((_url, init) => {
+    globalThis.fetch = jest.fn((_url: RequestInfo | URL, init?: RequestInit) => {
       const pending = new Promise<Response>((_resolve, reject) => {
         init?.signal?.addEventListener('abort', () => reject(failure));
       });

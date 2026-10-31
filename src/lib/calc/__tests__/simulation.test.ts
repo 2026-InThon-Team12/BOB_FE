@@ -28,7 +28,7 @@ describe('derivePhase / availableActions', () => {
     expect(simulationEndDay(item)).toBe('2026-10-08');
     expect(derivePhase(item, '2026-10-07', policy)).toBe('simulating');
     expect(derivePhase(item, '2026-10-08', policy)).toBe('awaitingDecision');
-    expect(availableActions('simulating')).toEqual(['abandon']);
+    expect(availableActions('simulating')).toEqual(['buy', 'abandon']);
     expect(availableActions('awaitingDecision')).toEqual(['buy', 'abandon', 'hold']);
   });
 
