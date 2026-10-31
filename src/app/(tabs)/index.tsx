@@ -89,7 +89,6 @@ export default function HomeScreen() {
             {copy.main.tagline}
           </Text>
         </Row>
-        <Icon name="bell" size="lg" />
       </Row>
 
       {/* 오늘의 질문 */}

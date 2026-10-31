@@ -119,9 +119,12 @@ export default function ResultScreen() {
         </Card>
       )}
 
-      {view.phase === 'awaitingDecision' ? (
+      {view.phase === 'awaitingDecision' || view.phase === 'simulating' ? (
         <Stack gap={3}>
           <Text variant="heading">{copy.result.ask}</Text>
+          {view.phase === 'simulating' && (
+            <Text variant="label" tone="secondary">{copy.result.inProgress(view.daysLeft)}</Text>
+          )}
           <Row gap={3}>
             <Stack flex={1}>
               <Button label={copy.decision.buy} sublabel={copy.decision.buySub} onPress={() => onDecide('buy')} />
@@ -135,17 +138,10 @@ export default function ResultScreen() {
               />
             </Stack>
           </Row>
-          <Button label={copy.decision.hold(policy.holdDays)} variant="ghost" onPress={() => onDecide('hold')} />
+          {view.phase === 'awaitingDecision' && (
+            <Button label={copy.decision.hold(policy.holdDays)} variant="ghost" onPress={() => onDecide('hold')} />
+          )}
         </Stack>
-      ) : view.phase === 'simulating' ? (
-        <Card tone="subtle">
-          <Stack gap={2}>
-            <Text variant="label" tone="secondary">
-              {copy.result.inProgress(view.daysLeft)}
-            </Text>
-            <Button label={copy.result.giveUpEarly} variant="ghost" onPress={() => onDecide('abandon')} />
-          </Stack>
-        </Card>
       ) : null}
     </Screen>
   );

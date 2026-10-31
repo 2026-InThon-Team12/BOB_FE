@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Animated, Platform, Pressable, View } from 'react-native';
+import { Animated, Platform, View } from 'react-native';
 
 import { Confetti } from '@/components/feature';
 import { Button, Card, EmptyState, Gauge, Row, Screen, ScreenHeader, Stack, Text } from '@/components/ui';
@@ -18,18 +18,17 @@ const useStyles = makeStyles((t) => ({
 
 const RING_Y = 140;
 
-/** 목표 달성 (명세서 4.10) — 링 팝 + 폭죽, 링을 누르면 다시 재생 */
+/** 목표 달성 (명세서 4.10) — 화면 진입 시 링 팝 + 폭죽 */
 export default function GoalDoneScreen() {
   const styles = useStyles();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const data = useAchievedGoal(id);
-  const [replay, setReplay] = useState(0);
   const [pop] = useState(() => new Animated.Value(0.6));
 
   useEffect(() => {
     pop.setValue(0.6);
     Animated.spring(pop, { toValue: 1, friction: 4, tension: 60, useNativeDriver: Platform.OS !== 'web' }).start();
-  }, [replay, pop]);
+  }, [pop]);
 
   const close = () => goBack('/goal');
   const header = <ScreenHeader onBack={close} backIcon="close" backLabel={copy.goalDone.close} />;
@@ -55,7 +54,6 @@ export default function GoalDoneScreen() {
       }
     >
       <View style={styles.hero}>
-        <Pressable onPress={() => setReplay((n) => n + 1)} accessibilityRole="button" accessibilityLabel={copy.goalDone.replay}>
           <Animated.View style={{ transform: [{ scale: pop }] }}>
             <Gauge value={1} accessibilityLabel={copy.goalDone.title}>
               <Text variant="display" tone="brand">
@@ -66,7 +64,6 @@ export default function GoalDoneScreen() {
               </Text>
             </Gauge>
           </Animated.View>
-        </Pressable>
         <Text variant="title" align="center">
           {copy.goalDone.title}
         </Text>
@@ -102,7 +99,7 @@ export default function GoalDoneScreen() {
         </Row>
       </Card>
 
-      <Confetti replay={replay} originY={RING_Y} />
+      <Confetti originY={RING_Y} />
     </Screen>
   );
 }

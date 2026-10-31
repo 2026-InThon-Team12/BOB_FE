@@ -69,8 +69,10 @@ describe('물품 등록', () => {
 });
 
 describe('결정 흐름', () => {
-  it('기간 중에는 구매 불가, 포기는 가능', () => {
+  it('기간 중에도 구매와 포기가 가능', () => {
     const [a, b] = addItems([input(), input({ name: '조명' })]);
+    expect(decideItem(a.id, 'buy').status).toBe('bought');
+    expect(Object.values(getState().expenses).filter((e) => e.refId === a.id)).toHaveLength(1);
     expectCode(() => decideItem(a.id, 'buy'), 'invalid_transition');
     expect(decideItem(b.id, 'abandon').status).toBe('abandoned');
   });
@@ -104,7 +106,7 @@ describe('결정 흐름', () => {
     // 연장된 기간 안이므로 오늘도 답할 수 있다
     answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[1].id });
     expect(Object.values(getState().answers)).toHaveLength(2);
-    expectCode(() => decideItem(item.id, 'buy'), 'invalid_transition');
+    expect(decideItem(item.id, 'buy').status).toBe('bought');
   });
 });
 

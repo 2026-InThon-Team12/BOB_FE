@@ -24,7 +24,7 @@ const useStyles = makeStyles((t) => ({
   piece: { position: 'absolute', top: 0, borderRadius: t.space[1] / 2 },
 }));
 
-export function Confetti({ replay, originY }: { replay: number; originY: number }) {
+export function Confetti({ originY }: { originY: number }) {
   const theme = useTheme();
   const styles = useStyles();
   const [width, setWidth] = useState(0);
@@ -68,7 +68,7 @@ export function Confetti({ replay, originY }: { replay: number; originY: number 
     );
     Animated.parallel(anims).start();
     return () => anims.forEach((a) => a.stop());
-  }, [replay, reduced, pieces]);
+  }, [reduced, pieces]);
 
   if (reduced) return null;
 

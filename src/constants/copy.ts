@@ -261,8 +261,7 @@ export const copy = {
     reasonWarning: (reason: string, rate: number) =>
       `${josa(reason, '으로/로')} 등록한 물건은 지금까지 ${Math.round(rate * 100)}%를 포기했어요.`,
     ask: '살까요, 보낼까요?',
-    inProgress: (left: number) => `아직 ${left}일 남았어요. 끝까지 지켜본 뒤에 정해요.`,
-    giveUpEarly: '지금 그만 볼래요',
+    inProgress: (left: number) => `아직 ${left}일 남았어요. 마음을 정했다면 지금 선택해도 좋아요.`,
     boughtTitle: '살게요로 기록했어요',
     boughtBody: (days: number) => `${days}일 뒤에 실제로 얼마나 썼는지 물어볼게요.`,
     boughtToast: (days: number) => `구매로 기록했어요. ${days}일 뒤에 얼마나 썼는지 물어볼게요`,
@@ -358,7 +357,6 @@ export const copy = {
     buy: '사러 가기',
     next: '다음 목표 정하기',
     close: '닫기',
-    replay: '축하 다시 보기',
   },
   impulse: {
     title: '지금 뭘 사려고 하나요?',

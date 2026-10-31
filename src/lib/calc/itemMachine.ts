@@ -48,8 +48,8 @@ export function derivePhase(item: Item, today: string, policy: Pick<Policy, 'rev
 
 /** 단계별로 가능한 행동 */
 const ACTIONS: Record<ItemPhase, ItemAction[]> = {
-  // 진행 중에도 포기는 언제든 가능
-  simulating: ['abandon'],
+  // 진행 중에도 구매하거나 포기할 수 있다
+  simulating: ['buy', 'abandon'],
   awaitingDecision: ['buy', 'abandon', 'hold'],
   bought: [],
   awaitingReview: ['review'],
