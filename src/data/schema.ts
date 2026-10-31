@@ -32,6 +32,7 @@ export type DataState = z.infer<typeof DataStateSchema>;
 
 export const initialSettings: Settings = {
   onboarded: false,
+  helpSeen: [],
   clockOffsetDays: 0,
   dailySavingOverride: null,
   themeScheme: null,

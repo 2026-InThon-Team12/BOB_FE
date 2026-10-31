@@ -165,6 +165,7 @@ export const copy = {
       }`,
     retry: '다시 고르기',
     toManual: '직접 입력하기',
+    toScreenshot: '장바구니 스크린샷으로 등록하기',
     // 링크
     linkScreenTitle: '상품 링크 붙여넣기',
     linkLabel: '상품 링크',
@@ -172,7 +173,7 @@ export const copy = {
     linkInvalid: '링크 주소를 확인해 주세요',
     linkError: (error: unknown) => {
       const value = error as { code?: string; body?: { error?: { code?: string } } } | null;
-      if (value?.body?.error?.code === 'PRODUCT_URL_BLOCKED') return '쇼핑몰이 서버의 상품 정보 요청을 차단했어요. 링크는 보관할 수 있어요. 상품명·가격을 직접 입력하거나 장바구니 사진으로 등록해 주세요.';
+      if (value?.body?.error?.code === 'PRODUCT_URL_BLOCKED') return '쇼핑몰에서 BoB의 상품 정보 접근을 차단해 링크로 불러올 수 없어요. 장바구니 스크린샷으로 등록하거나 상품명·가격을 직접 입력해 주세요.';
       if (value?.code === 'timeout' || value?.code === 'network') return '연결이 원활하지 않아요. 입력한 링크는 유지했어요. 잠시 후 다시 불러와 주세요.';
       return '상품 정보를 불러오지 못했어요. 상품 링크를 확인해 다시 시도하거나, 링크를 유지한 채 직접 입력해 주세요.';
     },

@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -22,6 +23,7 @@ export default function TodayCheckScreen() {
   const check = useTodayCheck();
   const styles = useStyles();
   const entry = check.current;
+  useFirstVisitHelp('daily', !check.loading && !!entry && entry.question.phase === 'pre');
   const total = check.answered.length + check.entries.length;
 
   return (

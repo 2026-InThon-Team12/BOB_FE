@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router } from 'expo-router';
 import { Pressable } from 'react-native';
 
@@ -10,6 +11,7 @@ import { formatMonthDay, formatWon } from '@/lib/format';
 /** 지갑 탭 (기능 7) — 자유 소비 잔액 · 이번 달 돈 계획 · 등록 안 하고 쓴 돈 */
 export default function WalletScreen() {
   const wallet = useWallet();
+  useFirstVisitHelp('wallet');
   const toPlan = () => router.push('/budget/edit');
   const toRecord = () => router.push('/expenses/new');
 

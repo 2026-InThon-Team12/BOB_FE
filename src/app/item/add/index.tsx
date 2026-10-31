@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router } from 'expo-router';
 
 import { MethodOption } from '@/components/feature';
@@ -9,6 +10,7 @@ import { goBack } from '@/lib/navigation';
 /** 등록 방법 선택 (시안 "무엇을 사고 싶나요?") */
 export default function AddMethodScreen() {
   const startManual = useStartManual();
+  useFirstVisitHelp('register');
 
   return (
     <Screen

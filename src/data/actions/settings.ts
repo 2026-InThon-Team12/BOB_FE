@@ -1,5 +1,6 @@
 /** 설정과 데이터 관리 */
 import type { Settings } from '@/types';
+import type { HelpScope } from '@/config/helpFlow';
 
 import { createInitialState, initialSettings } from '../schema';
 import { update } from '../store';
@@ -7,6 +8,17 @@ import { update } from '../store';
 const patchSettings = (patch: Partial<Settings>) => update((s) => ({ settings: { ...s.settings, ...patch } }));
 
 export const completeOnboarding = () => patchSettings({ onboarded: true });
+
+/** Claim before navigation so back, rapid focus events and restarts cannot replay it. */
+export function claimHelp(scope: HelpScope): boolean {
+  let claimed = false;
+  update(s => {
+    if (!s.settings.onboarded || s.settings.helpSeen.includes(scope)) return {};
+    claimed = true;
+    return { settings: { ...s.settings, helpSeen: [...s.settings.helpSeen, scope] } };
+  });
+  return claimed;
+}
 
 export const setDailySavingOverride = (amount: number | null) =>
   patchSettings({ dailySavingOverride: amount !== null && amount > 0 ? Math.round(amount) : null });

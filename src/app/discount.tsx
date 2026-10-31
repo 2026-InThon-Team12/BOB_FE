@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -62,6 +63,7 @@ export default function DiscountTrapScreen() {
   };
 
   const hasLines = trap.lines.length > 0;
+  useFirstVisitHelp('discount', hasLines);
   const isTrap = check.verdict === 'trap';
 
   return (

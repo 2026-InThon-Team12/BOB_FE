@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
@@ -41,6 +42,7 @@ export default function GoalScreen() {
   const imp = useImpulse();
   const shelf = useGoalShelf();
   const { overview } = imp;
+  useFirstVisitHelp('goal', !!overview.goal);
   const toNewGoal = () => router.push('/goals/new');
 
   if (!overview.goal) {

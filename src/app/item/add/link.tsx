@@ -38,6 +38,7 @@ export default function LinkScreen() {
       />
       {link.failed && <Stack gap={3}>
         <Text tone="warning">{link.errorMessage}</Text>
+        <Button label={copy.register.toScreenshot} variant="secondary" onPress={() => router.push('/item/add/screenshot')} />
         <Button label={copy.register.toManual} variant="secondary" onPress={() => {link.startManual(); router.replace('/item/add/review');}} />
       </Stack>}
     </Screen>

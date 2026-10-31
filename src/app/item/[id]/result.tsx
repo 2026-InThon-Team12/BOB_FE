@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 
@@ -16,6 +17,7 @@ export default function ResultScreen() {
   const toast = useToast();
   const [confirmation, setConfirmation] = useState<'buy' | 'abandon' | null>(null);
   const deciding = useRef(false);
+  useFirstVisitHelp('decision', !!view);
 
   /** 확정 버튼을 누르기 전에는 서버·기기 기록을 변경하지 않는다. */
   const onDecide = async (action: 'buy' | 'abandon' | 'hold') => {

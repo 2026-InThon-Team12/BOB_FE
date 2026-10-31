@@ -3,6 +3,7 @@
  * 같은 스키마로 로컬 저장 데이터와 백업 파일을 검증한다.
  */
 import { z } from 'zod';
+import { HELP_SCOPES } from '@/config/helpFlow';
 
 // ── 열거형 ────────────────────────────────────────────────
 
@@ -273,6 +274,7 @@ export type CartLine = z.infer<typeof CartLineSchema>;
 
 export const SettingsSchema = z.object({
   onboarded: z.boolean(),
+  helpSeen: z.array(z.enum(HELP_SCOPES)).default([]),
   /** 데모용 시간 이동 (일 단위) */
   clockOffsetDays: z.number().int(),
   /** 일평균 저축액을 직접 입력한 경우 (없으면 가계부에서 계산) */

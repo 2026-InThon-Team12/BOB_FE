@@ -32,6 +32,7 @@ export { addItems, decideItem, removeItem, submitReview, updateItem, type ItemPa
 export { registerItemsRemote, registerAfterReasons, completeDiscountRegistration } from './actions/remoteItems';
 export {
   completeOnboarding,
+  claimHelp,
   resetAllData,
   resetClock,
   setDailySavingOverride,

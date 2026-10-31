@@ -6,6 +6,7 @@ import Svg, { Defs, Mask, Rect } from 'react-native-svg';
 
 import { Button, Row, Text, TextLink } from '@/components/ui';
 import { helpCanvas, helpCopy, helpSteps } from '@/constants/help';
+import { helpStepIndices } from '@/config/helpFlow';
 import { makeStyles, useTheme } from '@/theme';
 
 const useStyles = makeStyles((t) => ({
@@ -26,27 +27,28 @@ const useStyles = makeStyles((t) => ({
 }));
 
 export default function HelpScreen() {
-  const { intro } = useLocalSearchParams<{ intro?: string }>();
+  const { intro, scope } = useLocalSearchParams<{ intro?: string; scope?: string }>();
+  const steps = helpStepIndices(intro === '1', scope).map(i => helpSteps[i]);
   const [index, setIndex] = useState(0);
   const [menu, setMenu] = useState(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [bubbleHeight, setBubbleHeight] = useState(0);
   const theme = useTheme();
   const styles = useStyles();
-  const step = helpSteps[index];
+  const step = steps[index];
   const close = () => {
-    if (intro === '1') router.replace('/onboarding/goal');
+    if (intro === '1') router.replace('/onboarding/budget');
     else if (router.canGoBack()) router.back();
     else router.replace('/');
   };
-  const next = () => index === helpSteps.length - 1 ? close() : setIndex(index + 1);
+  const next = () => index === steps.length - 1 ? close() : setIndex(index + 1);
   const gesture = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 25 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
     onPanResponderRelease: (_, g) => {
-      if (g.dx < -50) setIndex(Math.min(helpSteps.length - 1, index + 1));
+      if (g.dx < -50) setIndex(Math.min(steps.length - 1, index + 1));
       else if (g.dx > 50) setIndex(Math.max(0, index - 1));
     },
-  }), [index]);
+  }), [index, steps.length]);
 
   // Image and rounded mask share a contain transform: no stretching or cropping.
   const scale = Math.max(0, Math.min(size.width / helpCanvas.width, size.height / helpCanvas.height));
@@ -74,7 +76,7 @@ export default function HelpScreen() {
         <TextLink label={helpCopy.close} onPress={close} />
       </Row></View>
       {menu ? <ScrollView contentContainerStyle={styles.menu}>
-        {helpSteps.map((s, i) => <Button key={s.topic} variant="secondary" label={`${i + 1}. ${s.topic}`} onPress={() => { setIndex(i); setMenu(false); }} />)}
+        {steps.map((s, i) => <Button key={s.topic} variant="secondary" label={`${i + 1}. ${s.topic}`} onPress={() => { setIndex(i); setMenu(false); }} />)}
       </ScrollView> : <>
         <View style={styles.stage} {...gesture.panHandlers} onLayout={(e) => setSize(e.nativeEvent.layout)}>
           {scale > 0 && <View style={[styles.picture, { width, height }]}>
@@ -97,8 +99,8 @@ export default function HelpScreen() {
                     <Text variant="label">{step.body}</Text>
                     <Row justify="space-between">
                       <Button label={helpCopy.previous} disabled={index === 0} variant="ghost" onPress={() => setIndex(index - 1)} />
-                      <Text variant="caption" tone="brand">{index + 1} / {helpSteps.length}</Text>
-                      <Button label={index === helpSteps.length - 1 ? intro === '1' ? helpCopy.start : helpCopy.done : helpCopy.next} onPress={next} />
+                      <Text variant="caption" tone="brand">{index + 1} / {steps.length}</Text>
+                      <Button label={index === steps.length - 1 ? intro === '1' ? helpCopy.start : helpCopy.done : helpCopy.next} onPress={next} />
                     </Row>
                   </View>
                 </ScrollView>
@@ -106,8 +108,8 @@ export default function HelpScreen() {
             </View>
           </View>}
         </View>
-        <View style={styles.dots} accessible accessibilityLabel={`${index + 1} / ${helpSteps.length}`}>
-          {helpSteps.map((s, i) => <View key={s.topic} style={[styles.dot, i === index && styles.activeDot]} />)}
+        <View style={styles.dots} accessible accessibilityLabel={`${index + 1} / ${steps.length}`}>
+          {steps.map((s, i) => <View key={s.topic} style={[styles.dot, i === index && styles.activeDot]} />)}
         </View>
       </>}
     </View>

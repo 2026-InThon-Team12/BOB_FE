@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
@@ -84,6 +85,7 @@ function SimListRow({ row, first }: { row: SimRow; first: boolean }) {
 export default function HomeScreen() {
   const styles = useStyles();
   const home = useHome();
+  useFirstVisitHelp('home');
   const impulse = useImpulse();
   const openImpulse = () => router.push({pathname: '/impulse', params: {preset: String(impulse.picked)}});
   const { goal } = home;

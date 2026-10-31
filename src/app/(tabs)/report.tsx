@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { Pressable, View } from 'react-native';
 
 import { BarRow, RateRow, StatTile } from '@/components/feature';
@@ -24,6 +25,7 @@ export default function ReportScreen() {
   const theme = useTheme();
   const styles = useStyles();
   const r = useReport();
+  useFirstVisitHelp('report', !r.empty);
 
   const monthNav = (
     <Row gap={1}>

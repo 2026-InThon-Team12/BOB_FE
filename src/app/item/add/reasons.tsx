@@ -1,3 +1,4 @@
+import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable } from 'react-native';
@@ -46,6 +47,7 @@ export default function ReasonsScreen() {
   const styles = useStyles();
   const toast = useToast();
   const step = useReasonStep();
+  useFirstVisitHelp('reasons', !step.empty && !!step.item);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   if (step.empty) return <Redirect href="/" />;
