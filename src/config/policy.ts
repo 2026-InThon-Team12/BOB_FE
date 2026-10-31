@@ -63,7 +63,8 @@ export const policy = {
   emphasis: { minSamples: 1, overPredictionRatio: 2 },
 
   /** AI 호출 */
-  ai: { timeoutMs: 10_000 },
+  // Vercel cold start + vision 분석 시간을 고려한 상한
+  ai: { timeoutMs: 60_000 },
 
   /** mock AI 응답 지연 (실제 호출 느낌을 내기 위함) */
   mock: { minDelayMs: 300, maxDelayMs: 800 },

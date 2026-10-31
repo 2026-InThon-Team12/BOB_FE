@@ -1,7 +1,4 @@
-/**
- * 서버 응답(DTO) → 도메인 타입.
- * 백엔드 필드명·형식이 바뀌면 이 파일만 고친다. (형식은 팀원과 확정 전 초안)
- */
+/** 서버 OpenAPI 응답(DTO) → 앱 도메인 타입. */
 import { z } from 'zod';
 
 import { CATEGORY_LABELS } from '@/constants/categories';
@@ -17,19 +14,40 @@ import {
 
 import { AiRequestError, type CategoryGuess } from '../types';
 
-/** 카테고리는 영문 키("digital")와 한글 라벨("디지털기기") 둘 다 받는다 (팀원 확인 전) */
+/**
+ * 서버 Category enum을 앱의 CategoryId로 바꾼다.
+ * 이전 개발 응답(앱 키·한글 라벨)도 받아 로컬/구버전 서버와 호환한다.
+ */
+const API_CATEGORY_TO_ID: Record<string, CategoryId> = {
+  DAILY_LIVING: 'daily',
+  CLOTHING: 'clothing',
+  FURNITURE: 'furniture',
+  APPLIANCES: 'appliance',
+  DIGITAL: 'digital',
+  HOBBY: 'hobby',
+  GAME: 'game',
+  BEAUTY: 'beauty',
+  FOOD: 'food',
+  OTHER: 'etc',
+};
 const LABEL_TO_ID = Object.fromEntries(Object.entries(CATEGORY_LABELS).map(([id, label]) => [label, id])) as Record<
   string,
   CategoryId
 >;
 export function toCategory(value: unknown): CategoryId | undefined {
   if (typeof value !== 'string') return undefined;
-  if ((CATEGORY_IDS as readonly string[]).includes(value)) return value as CategoryId;
-  return LABEL_TO_ID[value.trim()];
+  const normalized = value.trim();
+  if ((CATEGORY_IDS as readonly string[]).includes(normalized)) return normalized as CategoryId;
+  return API_CATEGORY_TO_ID[normalized] ?? LABEL_TO_ID[normalized];
 }
 
 const Confidence = z.number().min(0).max(1).optional();
-const Price = z.number().nonnegative().transform(Math.round).optional();
+const Price = z
+  .number()
+  .positive()
+  .transform(Math.round)
+  .nullish()
+  .transform((value) => value ?? undefined);
 
 function parse<T>(schema: z.ZodType<T>, data: unknown, what: string): T {
   const r = schema.safeParse(data);
@@ -37,37 +55,66 @@ function parse<T>(schema: z.ZodType<T>, data: unknown, what: string): T {
   return r.data;
 }
 
-const CategoryDto = z.object({ category: z.string(), confidence: Confidence });
-export function mapCategory(data: unknown): CategoryGuess {
-  const dto = parse(CategoryDto, data, '카테고리 인식');
-  const category = toCategory(dto.category);
-  return category ? { category, confidence: dto.confidence ?? 0.5 } : { category: 'etc', confidence: 0 };
-}
-
 const DraftDto = z.object({
   name: z.string(),
   price: Price,
-  imageUrl: z.string().optional(),
   category: z.string().optional(),
+  supplemental_question: z.string().optional(),
+  source: z.enum(['MANUAL', 'SCREENSHOT', 'URL', 'SHARE']).optional(),
+  source_url: z.string().nullish(),
+  image_url: z.string().nullish(),
+  image_crop: z.record(z.string(), z.unknown()).nullish(),
+  category_source: z.enum(['AI', 'FALLBACK']).optional(),
+  simulation_days: z.number().int().positive().nullish(),
+  // 구버전/개발 서버 응답 호환
   confidence: Confidence,
+  imageUrl: z.string().optional(),
 });
+
+const DraftAnalysisDto = z.object({
+  items: z.array(DraftDto).optional().default([]),
+  warnings: z.array(z.string()).optional().default([]),
+  analysis_method: z.enum(['text', 'vision', 'ocr', 'manual']),
+});
+
+const CategoryDto = z.object({ category: z.string(), confidence: Confidence });
+export function mapCategory(data: unknown): CategoryGuess {
+  const analysis = DraftAnalysisDto.safeParse(data);
+  const dto = analysis.success
+    ? analysis.data.items[0]
+    : parse(CategoryDto, data, '카테고리 인식');
+  if (!dto) throw new AiRequestError('카테고리 인식 결과가 비어 있어요.', 'invalid_response');
+  const category = toCategory(dto.category);
+  const confidence = 'confidence' in dto ? dto.confidence : undefined;
+  return category ? { category, confidence: confidence ?? 0.5 } : { category: 'etc', confidence: 0 };
+}
+
 const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sourceUrl?: string): ItemDraft => ({
   name: dto.name.trim(),
   price: dto.price,
-  imageUri: dto.imageUrl,
+  imageUri: dto.image_url ?? dto.imageUrl ?? undefined,
   category: toCategory(dto.category),
-  categoryConfidence: toCategory(dto.category) ? dto.confidence : undefined,
+  // OpenAPI에는 confidence가 없으므로, AI 추천 표시를 위한 중립값을 사용한다.
+  categoryConfidence: toCategory(dto.category) ? (dto.confidence ?? 0.5) : undefined,
   source,
-  sourceUrl,
+  sourceUrl: dto.source_url ?? sourceUrl,
 });
 
 export function mapCartScreenshot(data: unknown): ItemDraft[] {
-  const list = parse(z.union([z.array(DraftDto), z.object({ items: z.array(DraftDto) })]), data, '스크린샷 인식');
-  return (Array.isArray(list) ? list : list.items).filter((d) => d.name.trim()).map((d) => toDraft(d, 'screenshot'));
+  const result = parse(
+    z.union([DraftAnalysisDto, z.array(DraftDto), z.object({ items: z.array(DraftDto) })]),
+    data,
+    '스크린샷 인식',
+  );
+  const items = Array.isArray(result) ? result : result.items;
+  return items.filter((d) => d.name.trim()).map((d) => toDraft(d, 'screenshot'));
 }
 
 export function mapLink(data: unknown, url: string): ItemDraft {
-  return toDraft(parse(DraftDto, data, '링크 파싱'), 'link', url);
+  const analysis = DraftAnalysisDto.safeParse(data);
+  const dto = analysis.success ? analysis.data.items[0] : parse(DraftDto, data, '링크 파싱');
+  if (!dto) throw new AiRequestError('링크 인식 결과가 비어 있어요.', 'invalid_response');
+  return toDraft(dto, 'link', url);
 }
 
 export function mapDiscountRules(data: unknown): DiscountRule {

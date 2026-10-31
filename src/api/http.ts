@@ -11,6 +11,9 @@ import { ApiError } from './errors';
 
 export const API_PREFIX = '/api/v1';
 
+/** README에 적힌 Android Base URL(`/api/v1/` 포함)과 호스트 주소 둘 다 받는다. */
+export const normalizeApiBaseUrl = (baseUrl: string) => baseUrl.replace(/\/$/, '').replace(/\/api\/v1$/i, '');
+
 export type ImageUpload = {
   uri: string;
   name?: string;
@@ -30,7 +33,7 @@ type RequestOptions = {
 };
 
 export const buildUrl = (path: string, query?: RequestOptions['query']) => {
-  const base = `${env.apiBaseUrl.replace(/\/$/, '')}${API_PREFIX}${path}`;
+  const base = `${normalizeApiBaseUrl(env.apiBaseUrl)}${API_PREFIX}${path}`;
   const params = Object.entries(query ?? {}).filter(([, v]) => v !== undefined);
   if (params.length === 0) return base;
   return `${base}?${params.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&')}`;

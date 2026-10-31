@@ -39,11 +39,11 @@ npm install
 # 데모·개발자 도구 노출
 EXPO_PUBLIC_DEMO=true
 
-# mock 또는 real
-EXPO_PUBLIC_AI_MODE=mock
+# 실제 AI 백엔드 사용
+EXPO_PUBLIC_AI_MODE=real
 
 # real 모드에서 사용할 백엔드 주소
-# EXPO_PUBLIC_API_BASE_URL=https://api.example.com
+EXPO_PUBLIC_API_BASE_URL=https://bob-be.vercel.app
 ```
 
 `.env`에는 민감한 값을 넣을 수 있으므로 Git에 커밋하지 않습니다.
@@ -96,7 +96,7 @@ src/
 ## 데이터와 AI 동작
 
 - 사용자 데이터는 기기의 로컬 저장소에 보관합니다.
-- 기본 AI 모드는 `mock`이며 백엔드 없이 데모할 수 있습니다.
+- `.env`의 `EXPO_PUBLIC_AI_MODE=real`에서 BOB 백엔드로 카테고리·장바구니 인식을 요청합니다.
 - `real` 모드의 원격 요청이 실패하면 가능한 기능은 로컬 대체 로직으로 전환됩니다.
 - 장바구니 이미지 등 AI 분석용 데이터는 분석 요청에만 사용하고 앱 데이터로 원본을 저장하지 않습니다.
 

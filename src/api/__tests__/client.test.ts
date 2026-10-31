@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { ApiError, bobApi, buildUrl, ensureGuestSession, extractToken } from '@/api';
+import { ApiError, bobApi, buildUrl, ensureGuestSession, extractToken, normalizeApiBaseUrl } from '@/api';
 import { resetSessionCache } from '@/api/session';
 
 jest.mock('@/config/env', () => ({
@@ -30,6 +30,11 @@ beforeEach(async () => {
 const header = (c: Call, name: string) => (c.init.headers as Record<string, string>)[name];
 
 describe('buildUrl', () => {
+  it('호스트 주소와 /api/v1 포함 Base URL을 같게 정규화한다', () => {
+    expect(normalizeApiBaseUrl('https://bob-be.vercel.app')).toBe('https://bob-be.vercel.app');
+    expect(normalizeApiBaseUrl('https://bob-be.vercel.app/api/v1/')).toBe('https://bob-be.vercel.app');
+  });
+
   it('기본 주소 + /api/v1 + 경로, 쿼리 인코딩', () => {
     expect(buildUrl('/items')).toBe('https://api.test/api/v1/items');
     expect(buildUrl('/today', { date: '2026-10-31', skip: undefined, q: 'a b' })).toBe(
@@ -62,6 +67,7 @@ describe('엔드포인트', () => {
   });
 
   it('경로·메서드·인증 헤더·JSON 본문', async () => {
+    await bobApi.productUrlDrafts.create('https://shop.example.com/item/1');
     await bobApi.simulations.putAnswers('sim 1', '2026-10-31', { answers: [] });
     await bobApi.items.putDecision('it1', { decision: 'buy' });
     await bobApi.budgets.get('2026-10');
@@ -70,6 +76,7 @@ describe('엔드포인트', () => {
     await bobApi.pushToken.delete();
 
     expect(calls.map((c) => `${c.init.method} ${c.url.replace('https://api.test/api/v1', '')}`)).toEqual([
+      'POST /product-url-drafts',
       'PUT /simulations/sim%201/answers/2026-10-31',
       'PUT /items/it1/decision',
       'GET /budgets/2026-10',
@@ -79,8 +86,9 @@ describe('엔드포인트', () => {
     ]);
     expect(header(calls[0], 'Authorization')).toBe('Bearer tok');
     expect(header(calls[0], 'Content-Type')).toBe('application/json');
-    expect(calls[0].init.body).toBe(JSON.stringify({ answers: [] }));
-    expect(calls[2].init.body).toBeUndefined();
+    expect(calls[0].init.body).toBe(JSON.stringify({ url: 'https://shop.example.com/item/1' }));
+    expect(calls[1].init.body).toBe(JSON.stringify({ answers: [] }));
+    expect(calls[3].init.body).toBeUndefined();
   });
 
   it('401이면 세션을 새로 받아 한 번 다시 시도', async () => {

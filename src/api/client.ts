@@ -1,11 +1,9 @@
 /**
- * BE API 클라이언트 — `BE api 공유.md`의 엔드포인트를 그대로 옮겼다.
+ * BE API 클라이언트 — 백엔드 README와 OpenAPI 계약을 기준으로 한다.
  *
- * - 경로·메서드는 공유 문서 기준으로 확정.
- * - 요청·응답 형식은 스펙을 받기 전이라 body는 unknown으로 받고, 응답도 unknown으로 돌려준다.
- *   스펙이 오면 이 파일의 타입과 각 호출부의 mapper만 채우면 된다.
+ * - 응답은 unknown으로 받고 각 AI mapper에서 OpenAPI 형식을 검증한다.
  * - 데이터는 로컬 저장이 원본이므로(팀 결정) 지금 앱에서 실제로 쓰는 것은 AI 관련
- *   (itemDrafts, cartExtractions)뿐이다. 나머지는 연결 준비만 해 둔다.
+ *   (itemDrafts, cartExtractions, productUrlDrafts)뿐이다. 나머지는 연결 준비만 해 둔다.
  */
 import { ApiError } from './errors';
 import { request, type ImageUpload } from './http';
@@ -72,6 +70,9 @@ export const bobApi = {
   },
   cartExtractions: {
     create: (image: ImageUpload) => authed({ method: 'POST', path: '/cart-extractions', image: { upload: image } }),
+  },
+  productUrlDrafts: {
+    create: (url: string) => authed({ method: 'POST', path: '/product-url-drafts', json: { url } }),
   },
 
   // ── 품목 ─────────────────────────────────────────────

@@ -38,7 +38,8 @@ export function useScreenshotImport() {
   };
 }
 
-const isUrl = (text: string) => /^https?:\/\/\S+\.\S+/i.test(text.trim());
+// 백엔드 ProductUrlInput 계약은 HTTPS URL만 허용한다.
+const isUrl = (text: string) => /^https:\/\/\S+\.\S+/i.test(text.trim());
 
 export function useLinkImport() {
   const flow = useAddFlow();

@@ -4,5 +4,5 @@
  */
 export { bobApi, ensureGuestSession, extractToken, type BobApi, type Body } from './client';
 export { ApiError } from './errors';
-export { API_PREFIX, buildUrl, type ImageUpload } from './http';
+export { API_PREFIX, buildUrl, normalizeApiBaseUrl, type ImageUpload } from './http';
 export { clearGuestToken } from './session';

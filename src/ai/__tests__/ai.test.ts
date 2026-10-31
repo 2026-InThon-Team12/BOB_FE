@@ -2,7 +2,7 @@ import { AiRequestError, AiUnavailableError, withFallback, type AiService } from
 import { fallbackAi, guessCategoryByKeyword } from '@/ai/fallback';
 import { mockAi } from '@/ai/mock';
 import { realAi } from '@/ai/real';
-import { mapCartScreenshot, mapCategory, mapQuestions, toCategory } from '@/ai/real/mappers';
+import { mapCartScreenshot, mapCategory, mapLink, mapQuestions, toCategory } from '@/ai/real/mappers';
 
 describe('fallback', () => {
   it('키워드로 카테고리 추측, 못 찾으면 기타', () => {
@@ -47,11 +47,34 @@ describe('withFallback', () => {
 });
 
 describe('real mappers', () => {
-  it('카테고리는 영문 키와 한글 라벨 모두 받는다', () => {
+  it('카테고리는 API enum·영문 키·한글 라벨을 받는다', () => {
+    expect(toCategory('DIGITAL')).toBe('digital');
+    expect(toCategory('DAILY_LIVING')).toBe('daily');
+    expect(toCategory('APPLIANCES')).toBe('appliance');
     expect(toCategory('digital')).toBe('digital');
     expect(toCategory('디지털기기')).toBe('digital');
     expect(toCategory('없는값')).toBeUndefined();
     expect(mapCategory({ category: '모르는 분류', confidence: 0.9 })).toEqual({ category: 'etc', confidence: 0 });
+  });
+
+  it('OpenAPI DraftAnalysis에서 카테고리를 꺼낸다', () => {
+    expect(
+      mapCategory({
+        items: [
+          {
+            name: '무선 이어폰',
+            price: 89000,
+            category: 'DIGITAL',
+            supplemental_question: '오늘 쓸 일이 있었나요?',
+            source: 'MANUAL',
+            category_source: 'AI',
+            simulation_days: 7,
+          },
+        ],
+        warnings: [],
+        analysis_method: 'text',
+      }),
+    ).toEqual({ category: 'digital', confidence: 0.5 });
   });
 
   it('스크린샷 응답: 배열과 { items } 형태 모두 지원, 가격 반올림', () => {
@@ -60,6 +83,63 @@ describe('real mappers', () => {
       { name: '니트', price: 59000, imageUri: undefined, category: 'clothing', categoryConfidence: 0.9, source: 'screenshot', sourceUrl: undefined },
     ]);
     expect(mapCartScreenshot([{ name: '이어폰' }])[0]).toMatchObject({ name: '이어폰', category: undefined });
+  });
+
+  it('OpenAPI 스크린샷 응답의 snake_case·null 필드를 변환한다', () => {
+    const drafts = mapCartScreenshot({
+      items: [
+        {
+          name: ' 오버핏 니트 ',
+          price: null,
+          category: 'CLOTHING',
+          supplemental_question: '오늘 입을 순간이 있었나요?',
+          source: 'SCREENSHOT',
+          source_url: null,
+          image_url: 'https://example.com/knit.jpg',
+          image_crop: null,
+          category_source: 'AI',
+          simulation_days: null,
+        },
+      ],
+      warnings: [],
+      analysis_method: 'vision',
+    });
+    expect(drafts).toEqual([
+      {
+        name: '오버핏 니트',
+        price: undefined,
+        imageUri: 'https://example.com/knit.jpg',
+        category: 'clothing',
+        categoryConfidence: 0.5,
+        source: 'screenshot',
+        sourceUrl: undefined,
+      },
+    ]);
+  });
+
+  it('OpenAPI 상품 URL DraftAnalysis를 링크 초안으로 변환한다', () => {
+    const sourceUrl = 'https://shop.example.com/item/1';
+    expect(
+      mapLink(
+        {
+          items: [
+            {
+              name: '기계식 키보드',
+              price: 30000,
+              category: 'DIGITAL',
+              supplemental_question: '오늘 키보드가 필요했나요?',
+              source: 'URL',
+              source_url: sourceUrl,
+              category_source: 'AI',
+              simulation_days: 7,
+            },
+          ],
+          warnings: [],
+          analysis_method: 'text',
+        },
+        sourceUrl,
+      ),
+    ).toMatchObject({ name: '기계식 키보드', category: 'digital', source: 'link', sourceUrl });
   });
 
   it('형식이 다르면 invalid_response', () => {
@@ -87,7 +167,6 @@ describe('mock', () => {
 
 describe('real (BE 공유 API 기준)', () => {
   it('BE에 없는 기능은 AiUnavailableError → 로컬 대체로 넘어간다', async () => {
-    await expect(realAi.parseLink('https://a.b')).rejects.toBeInstanceOf(AiUnavailableError);
     await expect(realAi.parseDiscountRules({ uri: 'x' })).rejects.toBeInstanceOf(AiUnavailableError);
     await expect(
       realAi.personalizeQuestions({ name: '의자', price: 1, category: 'hobby', reasons: [] }),
