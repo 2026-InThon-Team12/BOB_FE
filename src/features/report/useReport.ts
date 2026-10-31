@@ -35,6 +35,8 @@ export function useReport() {
       minDays: t.minDays,
       maxDays: t.maxDays,
       samples: t.samples,
+      predictionWindowDays:t.predictionWindowDays,
+      actualWindowDays:t.actualWindowDays,
       predictedRatio: (t.predictedDays ?? 0) / scale,
       actualRatio: t.actualDays / scale,
       badge: t.ratio === null ? null : tendencyBadge(t.ratio),

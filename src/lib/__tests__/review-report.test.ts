@@ -20,3 +20,9 @@ it('compares only matching samples and retains all actual records in mixed categ
 it('keeps historical bucket ranges unchanged',()=>{
   expect(report([{...item,review:{usageBucket:'sometimes',usedDays:2.5,at:item.review!.at}}])[0]).toMatchObject({minDays:1,maxDays:4,actualDays:2.5});
 });
+it.each([3,7,14])('uses the raw YES count for a %i-day observation without rescaling',durationDays=>{
+  const boughtAt = '2026-12-01T00:00:00+09:00';
+  const reviewed: Item = {...item,purchase:{boughtAt},simulation:{...item.simulation,durationDays},summary:{text:'이전 요약',method:'TEMPLATE',fingerprint:'old',expectedDays:null,coverage:1,eligible:false,reason:'REFLECTION_NOT_USAGE',reflectionCounts:{YES:2,NO:1,UNSURE:0}}};
+  expect(report([reviewed])[0]).toMatchObject({predictedDays:2,predictionWindowDays:durationDays,actualWindowDays:14});
+  if (durationDays !== 14) expect(report([reviewed])[0].ratio).toBeNull();
+});

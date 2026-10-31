@@ -108,22 +108,23 @@ export function reflectionMetrics(item: Item) {
   const questions = Object.values(s.questions).filter(q => q.itemId === item.id && q.phase === 'pre' && q.date && days.includes(q.date));
   const swipe = questions.some(isSwipeQuestion) || questions.length === 0;
   const counts = swipe ? reflectionCounts(questions, Object.values(s.answers)) : undefined;
-  const expected = swipe ? null : responses.filter(r => r.template_code === 'EXPECTED_USE_DAYS').at(-1)?.answer.number_value ?? null;
+  const expected = swipe ? counts!.YES : responses.filter(r => r.template_code === 'EXPECTED_USE_DAYS').at(-1)?.answer.number_value ?? null;
   const coverage = days.length ? definite / days.length : 0;
   const early = !!item.purchase && dateKeyOf(item.purchase.boughtAt) < simulationEndDay(item);
-  return {responses, expected, coverage, counts, eligible: !swipe && days.length > 0 && getToday() >= simulationEndDay(item) && !early && coverage >= .7 && expected !== null};
+  return {responses, expected, coverage, counts, predictionWindowDays:swipe ? days.length : 30,
+    eligible: days.length > 0 && getToday() >= simulationEndDay(item) && !early && (swipe ? responses.length > 0 : coverage >= .7 && expected !== null)};
 }
 export async function summarizeItem(itemId: string): Promise<void> {
   return single(`summary:${itemId}`, async () => {
     const item = getState().items[itemId]; if (!item || item.status !== 'simulating' || getToday() < simulationEndDay(item)) return;
     const m = reflectionMetrics(item);
-    const fingerprint = requestDigest(JSON.stringify(m.responses));
+    const fingerprint = requestDigest('swipe-days-v1:' + JSON.stringify(m.responses));
     const remote = !!item.simulationId && env.aiMode === 'real';
     const preview = remote && getState().settings.clockOffsetDays !== 0;
     const syncState = preview ? 'preview' : remote ? 'pending' : 'local';
     if (item.summary?.fingerprint === fingerprint && (!m.counts || item.summary.reflectionCounts)
       && item.summary.syncState === (preview ? 'preview' : remote ? 'synced' : 'local')) return;
-    let summary: NonNullable<Item['summary']> = {text:reflectionCopy.localSummary(item.simulation.durationDays,m.responses.length,m.expected), method:'TEMPLATE', expectedDays:m.expected, coverage:m.coverage, eligible:m.eligible, reason:m.counts ? 'REFLECTION_NOT_USAGE' : m.eligible ? null : 'INSUFFICIENT_EVIDENCE', reflectionCounts:m.counts, fingerprint, syncState};
+    let summary: NonNullable<Item['summary']> = {text:m.counts ? reflectionCopy.swipeSummary(item.simulation.durationDays,m.counts.YES) : reflectionCopy.localSummary(item.simulation.durationDays,m.responses.length,m.expected), method:'TEMPLATE', expectedDays:m.expected, predictionWindowDays:m.predictionWindowDays, coverage:m.coverage, eligible:m.eligible, reason:m.eligible ? null : 'INSUFFICIENT_EVIDENCE', reflectionCounts:m.counts, fingerprint, syncState};
     // Keep device-owned evidence visible even when the optional remote summary fails.
     await update(s => ({items:{...s.items,[itemId]:{...s.items[itemId],summary}}}));
     // A developer clock offset does not advance the server's observation period.
@@ -131,7 +132,7 @@ export async function summarizeItem(itemId: string): Promise<void> {
       const dto = z.object({result:z.object({expected_used_days:z.number().nullable(),answer_coverage:z.number(),comparison_eligible:z.boolean(),comparison_reason:z.string().nullable()}),ai_summary:z.object({summary:z.string(),method:z.string()})}).parse(await bobApi.simulations.summarize(item.simulationId!,{responses:m.responses}));
       summary = {...summary,text:dto.ai_summary.summary,method:dto.ai_summary.method,expectedDays:dto.result.expected_used_days,coverage:dto.result.answer_coverage,eligible:dto.result.comparison_eligible,reason:dto.result.comparison_reason,syncState:'synced'};
     }
-    if (m.counts) summary = {...summary,expectedDays:null,eligible:false,reason:'REFLECTION_NOT_USAGE'};
+    if (m.counts) summary = {...summary,expectedDays:m.expected,predictionWindowDays:m.predictionWindowDays,eligible:m.eligible,reason:m.eligible ? null : 'INSUFFICIENT_EVIDENCE'};
     await update(s => ({items:{...s.items,[itemId]:{...s.items[itemId],summary}}}));
   });
 }

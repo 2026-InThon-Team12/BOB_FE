@@ -117,8 +117,8 @@ export default function ReportScreen() {
                   </Row>
                   {c.predictedDays === null
                     ? <Text tone="secondary">{copy.report.predictionUnavailable}</Text>
-                    : <BarRow value={copy.report.days(c.predictedDays)} ratio={c.predictedRatio} tone="predicted" valueTone="tertiary" />}
-                  <BarRow value={copy.report.actualRange(c.minDays,c.maxDays)} ratio={c.actualRatio} strong />
+                    : <BarRow label={copy.report.predictionWindow(c.predictionWindowDays)} value={copy.report.days(c.predictedDays)} ratio={c.predictedRatio} tone="predicted" valueTone="tertiary" />}
+                  <BarRow label={copy.report.actualWindow(c.actualWindowDays)} value={copy.report.actualRange(c.minDays,c.maxDays)} ratio={c.actualRatio} strong />
                   <Text variant="caption" tone="tertiary">{copy.report.reviewSamples(c.samples)}</Text>
                 </Stack>
               );

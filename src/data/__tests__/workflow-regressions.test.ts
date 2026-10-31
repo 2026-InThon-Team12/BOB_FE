@@ -104,13 +104,13 @@ it('daily AI questions are frozen locally, response bodies leave the device only
     question.mockResolvedValueOnce({id:`q${day}`,question_date:today,template_code:'SW_PRE_NEED',template_version:'swipe-v2',wording_version:'short-v1',question:'키보드가 없어서 최근 타이핑에 불편을 느낀 적이 있나요?',answer_spec:SWIPE_ANSWER_SPEC,generation_method:'AI'});
     await loadTodayReflections();await loadTodayReflections();
     await saveReflection(`q${day}`,{choice_code:code},code);
-    expect(reflectionMetrics(getState().items[i.id]).expected).toBeNull();
+    expect(reflectionMetrics(getState().items[i.id]).expected).toBe(1);
     actualNow += 86400000;
   }
   expect(question).toHaveBeenCalledTimes(3);expect(JSON.stringify(question.mock.calls)).not.toContain('choice_code');
   (bobApi.simulations.summarize as jest.Mock).mockResolvedValue({result:{expected_used_days:null,answer_coverage:2/3,comparison_eligible:false,comparison_reason:'REFLECTION_NOT_USAGE'},ai_summary:{summary:'긍정·모름·부정 응답이 하나씩 있어요.',method:'AI'}});
   await summarizeItem(i.id);await summarizeItem(i.id);
-  expect(bobApi.simulations.summarize).toHaveBeenCalledTimes(1);expect(getState().items[i.id].summary).toMatchObject({expectedDays:null,eligible:false,reflectionCounts:{YES:1,UNSURE:1,NO:1}});
+  expect(bobApi.simulations.summarize).toHaveBeenCalledTimes(1);expect(getState().items[i.id].summary).toMatchObject({expectedDays:1,predictionWindowDays:3,eligible:true,reflectionCounts:{YES:1,UNSURE:1,NO:1}});
   (bobApi.items.putDecision as jest.Mock).mockResolvedValue({...server,decision:'BUY',purchase:{id:'purchase',purchased_on:getToday(),review_start:getToday(),review_end:addDays(getToday(),13)}});
   await decideItemRemote(i.id,'buy');expect(getState().items[i.id].purchaseId).toBe('purchase');
   await loadTodayReflections();

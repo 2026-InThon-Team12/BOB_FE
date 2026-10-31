@@ -14,11 +14,13 @@ export const swipeAnswer = (direction: 'right' | 'up' | 'left') =>
 export type ReflectionCounts = {YES: number; UNSURE: number; NO: number};
 export function reflectionCounts(questions: Question[], answers: DailyAnswer[]): ReflectionCounts {
   const counts = {YES: 0, UNSURE: 0, NO: 0};
+  const byDay = new Map<string, string>();
   for (const answer of answers) {
     const question = questions.find(q => q.id === answer.questionId);
     const code = answer.value?.choice_code;
-    if (question && isSwipeQuestion(question) && (code === 'YES' || code === 'UNSURE' || code === 'NO')) counts[code]++;
+    if (question && question.itemId === answer.itemId && (!question.date || question.date === answer.date) && isSwipeQuestion(question) && (code === 'YES' || code === 'UNSURE' || code === 'NO')) byDay.set(`${answer.itemId}:${answer.date}`,code);
   }
+  for (const code of byDay.values()) counts[code as keyof ReflectionCounts]++;
   return counts;
 }
 export function validReflectionAnswer(spec: AnswerSpec, value: ReflectionAnswer): boolean {

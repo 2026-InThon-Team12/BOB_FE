@@ -3,6 +3,7 @@ import type { DailyAnswer, Item, Question, ReasonId } from '@/types';
 
 import type { ReasonStat } from './reasons';
 import { simulationDayKeys } from './simulation';
+import { isSwipeQuestion } from '@/lib/reflection';
 
 /**
  * yes: 있었어요 · no: 딱히 없었어요 · unsure: 잘 모르겠어요
@@ -17,18 +18,22 @@ export type DayCell = { date: string; state: DayState };
  */
 export function dayCells(params: { item: Item; questions: Question[]; answers: DailyAnswer[]; today: string }): DayCell[] {
   const { item, questions, answers, today } = params;
-  const optionInfo = new Map(
-    questions.flatMap((q) => q.options.map((o, index) => [o.id, { countsAsUse: o.countsAsUse, index }] as const)),
-  );
-  const byDate = new Map(answers.filter((a) => a.itemId === item.id).map((a) => [a.date, a]));
+  const byQuestion = new Map(questions.filter(q=>q.phase !== 'post').map(q=>[q.id,q]));
+  const byDate = new Map(answers.filter((a) => a.itemId === item.id && byQuestion.has(a.questionId)).map((a) => [a.date, a]));
 
   return simulationDayKeys(item).map((date) => {
     const a = byDate.get(date);
     if (!a) return { date, state: date < today ? 'missed' : 'pending' };
-    const o = optionInfo.get(a.optionId);
+    const q = byQuestion.get(a.questionId)!;
+    if (isSwipeQuestion(q)) {
+      const code = a.value?.choice_code ?? a.optionId;
+      return {date,state:code === 'YES' ? 'yes' : code === 'NO' ? 'no' : 'unsure'};
+    }
+    const index = q.options.findIndex(o=>o.id===a.optionId);
+    const o = q.options[index];
     if (!o) return { date, state: 'unsure' };
     if (o.countsAsUse) return { date, state: 'yes' };
-    return { date, state: o.index === 1 ? 'no' : 'unsure' };
+    return { date, state: index === 1 ? 'no' : 'unsure' };
   });
 }
 

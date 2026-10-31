@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { policy } from '@/config/policy';
 import { submitReviewRemote, useItem, useToday } from '@/data';
 import { reflectionCopy } from '@/constants/copy';
-import { derivePhase, predictionVerdict, reviewDueDay, VERDICT_RATIO } from '@/lib/calc';
+import { derivePhase, predictedVsActual, predictionVerdict, reviewDueDay, VERDICT_RATIO } from '@/lib/calc';
 import { dateKeyOf, diffDays } from '@/lib/date';
 
 export function useReview(itemId: string | undefined) {
@@ -19,8 +19,9 @@ export function useReview(itemId: string | undefined) {
     if (!item || !item.purchase) return null;
     const window = policy.reviewAfterDays;
     // 시뮬레이션이 끝난 뒤의 결과 → today를 충분히 뒤로
-    const predictedRate = item.summary?.expectedDays !== null && item.summary?.expectedDays !== undefined ? item.summary.expectedDays / 30 : 0;
-    const eligible = !!item.summary?.eligible && dateKeyOf(item.purchase.boughtAt) >= (item.simulation.endDate ?? dateKeyOf(item.simulation.startAt));
+    const prediction = predictedVsActual({item,questions:[],answers:[],policy});
+    const predictedRate = prediction?.predictedRate ?? 0;
+    const eligible = !!prediction?.comparable;
     const bucket = [...policy.reviewUsageBuckets,...policy.legacyReviewUsageBuckets].find((b) => b.id === bucketId) ?? null;
     const due = reviewDueDay(item, policy);
 
@@ -43,7 +44,7 @@ export function useReview(itemId: string | undefined) {
       daysSinceBought: diffDays(dateKeyOf(item.purchase.boughtAt), today),
       daysUntilDue: due ? Math.max(0, diffDays(today, due)) : 0,
       /** 점검 기간으로 환산한 예측 사용 일수 */
-      predictedDays: Math.round(predictedRate * window),
+      predictedDays: prediction?.predictedDays ?? 0,
       predictedRate,
       buckets: policy.reviewUsageBuckets,
       bucket,

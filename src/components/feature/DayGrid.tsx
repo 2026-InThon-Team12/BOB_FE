@@ -51,7 +51,7 @@ export function DayGrid({ states, counts }: Props) {
           <View key={r} style={styles.row}>
             {Array.from({ length: PER_ROW }, (_, i) =>
               row[i] ? (
-                <View key={i} style={[styles.cell, cellStyle(theme, row[i])]} />
+                <View key={i} accessible accessibilityLabel={`${r*PER_ROW+i+1}일: ${row[i] === 'pending' ? copy.result.pending : copy.result.legend[row[i] as Exclude<DayState,'pending'>]}`} style={[styles.cell, cellStyle(theme, row[i])]} />
               ) : (
                 <View key={i} style={styles.blank} />
               ),

@@ -4,6 +4,8 @@ import type { CategoryId, DailyAnswer, Item, Question } from '@/types';
 
 import { simulationEndDay } from './itemMachine';
 import { dateKeyOf } from '@/lib/date';
+import { reflectionCounts, isSwipeQuestion } from '@/lib/reflection';
+import { simulationDayKeys } from './simulation';
 
 export type PredictionComparison = {
   /** 시뮬레이션 사용일 ÷ 시뮬레이션 기간 */
@@ -16,6 +18,8 @@ export type PredictionComparison = {
   predictedDays: number;
   /** 점검에서 답한 사용 일수 (구간 대표값) */
   actualDays: number;
+  predictionWindowDays: number;
+  comparable: boolean;
 };
 
 const safeRatio = (predicted: number, actual: number) => {
@@ -31,15 +35,22 @@ export function predictedVsActual(params: {
   policy: Pick<Policy, 'reviewAfterDays'>;
 }): PredictionComparison | null {
   const { item, policy } = params;
-  if (!item.review || !item.summary?.eligible || item.summary.expectedDays === null || !item.purchase || dateKeyOf(item.purchase.boughtAt) < simulationEndDay(item)) return null;
-  const predictedRate = item.summary.expectedDays / 30;
+  if (!item.review || !item.purchase || dateKeyOf(item.purchase.boughtAt) < simulationEndDay(item)) return null;
+  const dates = simulationDayKeys(item);
+  const questions = params.questions.filter(q=>q.itemId===item.id && q.phase==='pre' && q.date && dates.includes(q.date));
+  const counts = item.summary?.reflectionCounts ?? (questions.some(isSwipeQuestion) ? reflectionCounts(questions,params.answers) : undefined);
+  if (counts ? !dates.length || counts.YES+counts.NO+counts.UNSURE === 0 : !item.summary?.eligible || item.summary.expectedDays === null) return null;
+  const predictedRate = counts ? counts.YES / dates.length : item.summary!.expectedDays! / (item.summary!.predictionWindowDays ?? 30);
+  const predictionWindowDays = counts ? dates.length : policy.reviewAfterDays;
   const actualRate = Math.min(1, item.review.usedDays / policy.reviewAfterDays);
   return {
     predictedRate,
     actualRate,
     ratio: safeRatio(predictedRate, actualRate),
-    predictedDays: predictedRate * policy.reviewAfterDays,
+    predictedDays: counts ? counts.YES : predictedRate * policy.reviewAfterDays,
     actualDays: item.review.usedDays,
+    predictionWindowDays,
+    comparable: predictionWindowDays === policy.reviewAfterDays,
   };
 }
 
@@ -69,7 +80,7 @@ export function categoryTendency(params: {
   for (const item of items) {
     const itemQuestions = questions.filter((q) => q.itemId === item.id);
     const cmp = predictedVsActual({ item, questions: itemQuestions, answers, policy });
-    if (!cmp) continue;
+    if (!cmp || !cmp.comparable) continue;
     groups.set(item.category, [...(groups.get(item.category) ?? []), cmp]);
   }
 
@@ -93,20 +104,23 @@ export function categoryTendency(params: {
 export function categoryReviewUsage(params: {
   items: Item[]; questions: Question[]; answers: DailyAnswer[]; policy: Policy;
 }) {
-  const groups = new Map<CategoryId, {category:CategoryId; samples:number; predictedDays:number|null; actualDays:number; minDays:number; maxDays:number}>();
+  const groups = new Map<CategoryId, {category:CategoryId; samples:number; predictedDays:number|null; actualDays:number; minDays:number; maxDays:number; predictionWindowDays:number; actualWindowDays:number; comparable:boolean}>();
   for (const item of params.items) {
     if (!item.review || !item.purchase) continue;
     const bucket = [...params.policy.reviewUsageBuckets,...params.policy.legacyReviewUsageBuckets].find(b=>b.id===item.review!.usageBucket);
     const cmp = predictedVsActual({...params,item});
-    const group = groups.get(item.category) ?? {category:item.category,samples:0,predictedDays:0,actualDays:0,minDays:0,maxDays:0};
+    const group = groups.get(item.category) ?? {category:item.category,samples:0,predictedDays:0,actualDays:0,minDays:0,maxDays:0,predictionWindowDays:0,actualWindowDays:0,comparable:true};
     group.samples++;
     group.predictedDays = cmp && group.predictedDays !== null ? group.predictedDays + cmp.predictedDays : null;
     group.actualDays += item.review.usedDays;
     group.minDays += bucket?.minDays ?? item.review.usedDays;
     group.maxDays += bucket?.maxDays ?? item.review.usedDays;
+    group.predictionWindowDays += cmp?.predictionWindowDays ?? 0;
+    group.actualWindowDays += params.policy.reviewAfterDays;
+    group.comparable = group.comparable && !!cmp?.comparable;
     groups.set(item.category,group);
   }
-  return [...groups.values()].map(group=>({...group,ratio:group.predictedDays === null ? null : safeRatio(group.predictedDays,group.actualDays)}));
+  return [...groups.values()].map(group=>({...group,ratio:group.predictedDays === null || !group.comparable ? null : safeRatio(group.predictedDays,group.actualDays)}));
 }
 
 /** 이 분야에 재질문 강조를 할지 */

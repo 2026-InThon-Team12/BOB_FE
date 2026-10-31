@@ -2,6 +2,7 @@
 import type { SimulationBand } from '@/config/policy';
 import type { DailyAnswer, Item, Question } from '@/types';
 import { addDays } from '@/lib/date';
+import { isSwipeQuestion } from '@/lib/reflection';
 
 import { simulationStartDay } from './itemMachine';
 
@@ -63,9 +64,9 @@ export function usageSummary(params: {
   const { item, questions, answers, today } = params;
   const days = simulationDayKeys(item);
   const inWindow = new Set(days);
-  const optionById = new Map(questions.flatMap((q) => q.options.map((o) => [o.id, o] as const)));
+  const byQuestion = new Map(questions.filter(q=>q.phase !== 'post').map(q=>[q.id,q]));
 
-  const mine = answers.filter((a) => a.itemId === item.id && inWindow.has(a.date));
+  const mine = answers.filter((a) => a.itemId === item.id && inWindow.has(a.date) && byQuestion.has(a.questionId));
   const byDate = new Map(mine.map((a) => [a.date, a]));
 
   const elapsedDays = days.filter((d) => d <= today).length;
@@ -75,8 +76,9 @@ export function usageSummary(params: {
   const answersByLabel: Record<string, number> = {};
   let usedDays = 0;
   for (const a of byDate.values()) {
-    const option = optionById.get(a.optionId);
-    if (option?.countsAsUse) usedDays += 1;
+    const question = byQuestion.get(a.questionId)!;
+    const option = question.options.find(o=>o.id===a.optionId);
+    if (isSwipeQuestion(question) ? (a.value?.choice_code ?? a.optionId) === 'YES' : option?.countsAsUse) usedDays += 1;
     const label = option?.label ?? '?';
     answersByLabel[label] = (answersByLabel[label] ?? 0) + 1;
   }

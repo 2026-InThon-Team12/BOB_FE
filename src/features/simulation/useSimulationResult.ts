@@ -40,7 +40,7 @@ export function useSimulationResult(itemId: string | undefined) {
   const today = useToday();
   const [busy,setBusy] = useState(false);
   const [decisionError,setError] = useState<string|null>(null);
-  const query = useQuery({queryKey:['reflection-summary',itemId,today], enabled: !!item && item.status === 'simulating' && today >= simulationEndDay(item),
+  const query = useQuery({queryKey:['reflection-summary','swipe-days-v1',itemId,today], enabled: !!item && item.status === 'simulating' && today >= simulationEndDay(item),
     queryFn:async()=>{await summarizeItem(itemId!);return true;},retry:false,staleTime:Infinity});
   const summaryLoading=query.isFetching;
   const error=decisionError ?? (query.isError ? item?.summary ? reflectionCopy.summaryRemoteFailed : reflectionCopy.summaryFailed : null);

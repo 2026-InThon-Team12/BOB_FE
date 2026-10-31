@@ -1,20 +1,26 @@
 import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
+import { View } from 'react-native';
 
-import { ItemSummary } from '@/components/feature';
+import { DayGrid, ItemSummary } from '@/components/feature';
 import { BottomSheet, Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, useToast } from '@/components/ui';
 import { copy, reflectionCopy } from '@/constants/copy';
 import { REASON_TOPICS } from '@/constants/reasons';
 import { policy } from '@/config/policy';
 import { useSimulationResult } from '@/features/simulation/useSimulationResult';
 import { goBack } from '@/lib/navigation';
+import { formatWon } from '@/lib/format';
+import { makeStyles } from '@/theme';
+
+const useStyles = makeStyles(t=>({divider:{height:1,backgroundColor:t.color.border.divider}}));
 
 /** 시뮬레이션 결과 + Buy · Bye · 7일 보류 (기능 1) */
 export default function ResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { view, decide, busy, error, summaryLoading, refresh } = useSimulationResult(id);
   const toast = useToast();
+  const styles = useStyles();
   const [confirmation, setConfirmation] = useState<'buy' | 'abandon' | null>(null);
   const deciding = useRef(false);
   useFirstVisitHelp('decision', !!view);
@@ -61,6 +67,20 @@ export default function ResultScreen() {
         imageUri={item.imageUri}
         extra={firstReason ? copy.result.registeredFor(REASON_TOPICS[firstReason]) : undefined}
       />
+
+      <Card><Stack gap={4}>
+        <Row gap={2} align="baseline" wrap>
+          <Text tone="brand">{copy.result.neededPrefix(view.totalDays)}</Text>
+          <Text variant="hero" tone="brand">{copy.result.neededDays(view.usedDays)}</Text>
+          <Text tone="brand">{copy.result.neededSuffix}</Text>
+        </Row>
+        <DayGrid states={view.cells.map(cell=>cell.state)} counts={view.counts}/>
+        <View style={styles.divider}/>
+        <Row justify="space-between" gap={3} wrap>
+          <Text tone="secondary">{copy.result.perUse}</Text>
+          <Text variant="title">{view.costPerUse === null ? '—' : formatWon(view.costPerUse)}</Text>
+        </Row>
+      </Stack></Card>
 
       <Card><Stack gap={3}>
         <Text variant="heading">{reflectionCopy.summaryTitle}</Text>

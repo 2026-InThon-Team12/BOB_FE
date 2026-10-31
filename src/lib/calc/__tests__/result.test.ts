@@ -1,4 +1,6 @@
-import { countStates, dayCells, reasonStats, reasonWarning, summaryNotes, type DayCell } from '@/lib/calc';
+import { countStates, dayCells, reasonStats, reasonWarning, summaryNotes, usageSummary, type DayCell } from '@/lib/calc';
+import { SWIPE_ANSWER_SPEC } from '@/constants/swipeQuestionCatalog';
+import { addDays } from '@/lib/date';
 import { makeAnswers, makeItem, makeQuestions } from '@/test/factories';
 import type { DailyAnswer, Question } from '@/types';
 
@@ -22,6 +24,18 @@ const cellsOf = (s: string): DayCell[] =>
   }));
 
 describe('dayCells', () => {
+  it.each([3,7,14])('maps swipe codes independently of option order for %i observation days',duration=>{
+    const item = makeItem({start:'2026-10-01',duration});
+    const base = makeQuestions(item)[0];
+    const questions: Question[] = Array.from({length:3},(_,i)=>({...base,id:`swipe-${i}`,date:addDays('2026-10-01',i),phase:'pre',templateVersion:'swipe-v2',answerSpec:SWIPE_ANSWER_SPEC,options:SWIPE_ANSWER_SPEC.options.map(o=>({id:o.code,label:o.label,countsAsUse:false}))}));
+    const answers: DailyAnswer[] = ['YES','UNSURE','NO'].map((code,i)=>({id:`answer-${i}`,itemId:item.id,date:questions[i].date!,questionId:questions[i].id,optionId:code,value:{choice_code:code},at:'2026-10-01T12:00:00+09:00'}));
+    const params = {item,questions,answers,today:'2026-11-01'};
+    const cells = dayCells(params);
+    expect(cells).toHaveLength(duration);
+    expect(cells.slice(0,3).map(c=>c.state)).toEqual(['yes','unsure','no']);
+    expect(countStates(cells)).toMatchObject({yes:1,unsure:1,no:1,missed:duration-3});
+    expect(usageSummary(params)).toMatchObject({usedDays:1,totalDays:duration});
+  });
   it('답 종류 · 미응답 · 남은 날', () => {
     const item = makeItem({ start: '2026-10-01', duration: 7 });
     const questions = makeQuestions(item);

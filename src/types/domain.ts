@@ -86,6 +86,7 @@ export const ItemSchema = z.object({
     text: z.string(), method: z.string(), expectedDays: z.number().nullable(),
     coverage: z.number(), eligible: z.boolean(), reason: z.string().nullable(),
     fingerprint: z.string(),
+    predictionWindowDays: z.number().nonnegative().optional(),
     syncState: z.enum(['local', 'pending', 'synced', 'preview']).optional(),
     reflectionCounts: z.object({YES: z.number().int().nonnegative(), UNSURE: z.number().int().nonnegative(), NO: z.number().int().nonnegative()}).optional(),
   }).optional(),
