@@ -56,7 +56,7 @@ export function ShelfSlot(props: Props) {
             {props.percent}
           </Text>
           <View style={[styles.strip, { backgroundColor: theme.color.brand.solid }]}>
-            <Text variant="caption" weight="700" tone="inverse">
+            <Text variant="caption" weight="700" tone="onBrand">
               {copy.shelf.filling}
             </Text>
           </View>
@@ -76,7 +76,7 @@ export function ShelfSlot(props: Props) {
       <View
         style={[
           styles.box,
-          { backgroundColor: theme.color.bg.surface, borderWidth: 2, borderColor: props.selected ? theme.color.brand.solid : 'transparent' },
+          { backgroundColor: theme.color.bg.surface, borderWidth: 2, borderColor: props.selected ? theme.color.border.focus : 'transparent' },
         ]}
       >
         {props.imageUri ? (

@@ -29,7 +29,7 @@ export function Switch({ value, onChange, accessibilityLabel }: Props) {
       <View
         style={[
           styles.track,
-          { backgroundColor: value ? theme.color.brand.solid : theme.color.switchOff, paddingLeft: value ? 21 : 3 },
+          { backgroundColor: value ? theme.color.text.brand : theme.color.switchOff, paddingLeft: value ? 21 : 3 },
         ]}
       >
         <View style={styles.knob} />

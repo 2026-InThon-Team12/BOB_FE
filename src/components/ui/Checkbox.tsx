@@ -40,7 +40,7 @@ export function Checkbox({ checked, onChange, accessibilityLabel }: Props) {
         },
       ]}
     >
-      {checked && <Icon name="check" size="sm" tone="inverse" />}
+      {checked && <Icon name="check" size="sm" tone="onBrand" />}
     </Pressable>
   );
 }

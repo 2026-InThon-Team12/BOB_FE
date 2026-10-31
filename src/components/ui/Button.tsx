@@ -7,10 +7,10 @@ import { Text, type TextTone } from './Text';
 
 /**
  * 시안 기준:
- * - primary: 파란 큰 버튼 ("다음 품목", "Buy")
- * - bye: 주황 버튼 ("Bye 안 살래요")
+ * - primary: 노란 큰 버튼 ("다음 품목", "Buy")
+ * - bye: 갈색 버튼 ("Bye 안 살래요")
  * - secondary: 흰 바탕 + 테두리 ("원래 필요했어요")
- * - onBrand: 파란 카드 위 흰 버튼 ("1분 만에 답하기")
+ * - onBrand: 노란 카드 위 흰 버튼 ("1분 만에 답하기")
  * - ghost: 글자만 ("그래도 살래요", "다음 목표 정하기")
  */
 export type ButtonVariant = 'primary' | 'bye' | 'secondary' | 'onBrand' | 'ghost' | 'danger';
@@ -35,6 +35,7 @@ const variantColors = (t: Theme, variant: ButtonVariant, pressed: boolean) => {
     case 'primary':
       return { bg: pressed ? t.color.brand.pressed : t.color.brand.solid, border: 'transparent' };
     case 'bye':
+      return { bg: pressed ? t.color.bye.pressed : t.color.bye.solid, border: 'transparent' };
     case 'danger':
       return { bg: pressed ? t.color.warning.pressed : t.color.warning.solid, border: 'transparent' };
     case 'secondary':
@@ -47,7 +48,7 @@ const variantColors = (t: Theme, variant: ButtonVariant, pressed: boolean) => {
 };
 
 const labelTone: Record<ButtonVariant, TextTone> = {
-  primary: 'inverse',
+  primary: 'onBrand',
   bye: 'inverse',
   danger: 'inverse',
   secondary: 'primary',

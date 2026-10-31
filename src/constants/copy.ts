@@ -128,7 +128,7 @@ export const copy = {
     recommended: '추천',
     screenshotTitle: '장바구니 스크린샷',
     screenshotBody: '쇼핑앱 장바구니를 캡처해 올리면 품목명과 가격을 한 번에 읽어와요.',
-    linkTitle: '쇼핑앱에서 공유하기',
+    linkTitle: '상품 링크 붙여넣기',
     linkBody: '상품 페이지 링크를 붙여 넣으면 이름·이미지·가격을 불러와요. 가격이 안 보이면 직접 적어 주세요.',
     manualTitle: '직접 입력',
     manualBody: '이름과 가격만 적으면 돼요.',

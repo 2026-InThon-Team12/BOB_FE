@@ -9,14 +9,15 @@ type Props = {
   /** 0 ~ 1 (범위를 벗어나면 잘라낸다) */
   value: number;
   tone?: ProgressTone;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   accessibilityLabel?: string;
 };
 
 const useStyles = makeStyles((t) => ({
   track: { width: '100%', overflow: 'hidden', borderRadius: t.radius.pill, backgroundColor: t.color.track },
-  sm: { height: 6 },
+  sm: { height: 4 },
   md: { height: 8 },
+  lg: { height: 12 },
   fill: { height: '100%', borderRadius: t.radius.pill },
 }));
 

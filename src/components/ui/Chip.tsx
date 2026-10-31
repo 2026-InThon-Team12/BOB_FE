@@ -7,8 +7,8 @@ import { Text, type TextTone } from './Text';
 
 /**
  * 선택 표시 방식 (시안에 세 가지가 있다)
- * - tint: 연한 파랑 + 체크 (구매 이유 복수 선택)
- * - solid: 파란 바탕 + 흰 글자 (카테고리 단일 선택)
+ * - tint: 연한 크림색 + 체크 (구매 이유 복수 선택)
+ * - solid: 노란 바탕 + 갈색 글자 (카테고리 단일 선택)
  * - inverse: 검은 바탕 + 흰 글자 (참기 자주 쓰는 항목)
  */
 export type ChipSelectedStyle = 'tint' | 'solid' | 'inverse';
@@ -42,9 +42,9 @@ const useStyles = makeStyles((t) => ({
 const selectedColors = (t: Theme, style: ChipSelectedStyle): { bg: string; border: string; text: TextTone } => {
   switch (style) {
     case 'tint':
-      return { bg: t.color.brand.subtle, border: t.color.brand.solid, text: 'brand' };
+      return { bg: t.color.brand.subtle, border: t.color.border.focus, text: 'brand' };
     case 'solid':
-      return { bg: t.color.brand.solid, border: t.color.brand.solid, text: 'inverse' };
+      return { bg: t.color.brand.solid, border: t.color.brand.solid, text: 'onBrand' };
     case 'inverse':
       return { bg: t.color.bg.inverse, border: t.color.bg.inverse, text: 'inverse' };
   }

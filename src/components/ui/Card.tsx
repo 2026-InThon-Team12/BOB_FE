@@ -5,11 +5,11 @@ import { makeStyles, useTheme, type SpaceKey } from '@/theme';
 
 /**
  * 시안 기준:
- * - default: 흰 카드, 테두리·그림자 없음 (회색 배경 위)
- * - brand: 파란 카드 (홈 "오늘의 질문")
- * - brandSubtle: 연한 파란 카드 ("사면 11월 20일")
+ * - default: 흰 카드, 테두리·그림자 없음 (크림색 배경 위)
+ * - brand: 노란 카드 (홈 "오늘의 질문")
+ * - brandSubtle: 연한 노란 카드 ("사면 11월 20일")
  * - warning: 연한 주황 카드 ("잠깐만요", 자유 소비 잔액)
- * - subtle: 연한 회색 카드 (달성 통계)
+ * - subtle: 연한 크림색 카드 (달성 통계)
  * - inverse: 어두운 카드 (리포트 "이번 달 발견")
  */
 export type CardTone = 'default' | 'subtle' | 'brand' | 'brandSubtle' | 'warning' | 'success' | 'inverse' | 'alert';
@@ -18,7 +18,7 @@ type Props = {
   children: ReactNode;
   tone?: CardTone;
   padding?: SpaceKey;
-  /** 선택된 카드 (파란 테두리, 예: 등록 방법 "추천") */
+  /** 선택된 카드 (노란 테두리, 예: 등록 방법 "추천") */
   selected?: boolean;
   /** 떠 있는 카드 (오늘의 질문 카드 스택) */
   floating?: boolean;
@@ -64,7 +64,7 @@ export function Card({
     {
       backgroundColor: bg,
       // 필수 경고는 빨간 테두리 (명세서 danger)
-      borderColor: selected ? theme.color.brand.solid : tone === 'alert' ? theme.color.alert.border : 'transparent',
+      borderColor: selected ? theme.color.border.focus : tone === 'alert' ? theme.color.alert.border : 'transparent',
       padding: theme.space[padding],
     },
   ];

@@ -23,12 +23,12 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.color.brand.solid,
+        tabBarActiveTintColor: theme.color.text.brand,
         tabBarInactiveTintColor: theme.color.text.tertiary,
         tabBarLabelStyle: { fontFamily: theme.font.family.medium },
         tabBarStyle: {
           backgroundColor: theme.color.bg.surface,
-          borderTopColor: theme.color.border.default,
+          borderTopColor: theme.color.border.navigation,
         },
         sceneStyle: { backgroundColor: theme.color.bg.canvas },
       }}

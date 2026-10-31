@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 
-import { Button, Screen, Stack, Text } from '@/components/ui';
+import { Brand, Button, Screen, Stack, Text } from '@/components/ui';
 import { env } from '@/config/env';
 import { copy } from '@/constants/copy';
 
@@ -21,7 +21,7 @@ export default function WelcomeScreen() {
     >
       <Stack flex={1} justify="center" gap={5}>
         <Stack gap={1}>
-          <Text variant="display">{copy.appName}</Text>
+          <Brand label={copy.appName} />
           <Text variant="label" tone="brand">
             {copy.onboarding.tagline}
           </Text>

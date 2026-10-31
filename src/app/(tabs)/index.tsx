@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import {
   Badge,
+  Brand,
   Button,
   Card,
   EmptyState,
@@ -22,6 +23,9 @@ import { formatWon } from '@/lib/format';
 import { makeStyles, useTheme } from '@/theme';
 
 const useStyles = makeStyles((t) => ({
+  header: { minHeight: t.space[12], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  bell: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: t.radius.md },
+  headline: { ...t.typography.cardTitle },
   reviewIcon: {
     width: 40,
     height: 40,
@@ -30,7 +34,7 @@ const useStyles = makeStyles((t) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowDivider: { height: 1, backgroundColor: t.color.border.default },
+  rowDivider: { height: 1, backgroundColor: t.color.border.divider },
   row: { paddingVertical: t.space[3] },
   progressCol: { width: 64, alignItems: 'flex-end', gap: t.space[1] },
 }));
@@ -49,7 +53,7 @@ function SimListRow({ row, first }: { row: SimRow; first: boolean }) {
         style={({ pressed }) => [styles.row, pressed && { opacity: theme.motion.pressedOpacity }]}
       >
         <Row gap={3}>
-          <Thumbnail uri={row.item.imageUri} placeholder={copy.common.imagePlaceholder} />
+          <Thumbnail uri={row.item.imageUri} size="sm" placeholder={copy.common.imagePlaceholder} />
           <Stack flex={1} gap={1}>
             <Text variant="bodyStrong" numberOfLines={1}>
               {row.item.name}
@@ -74,7 +78,7 @@ function SimListRow({ row, first }: { row: SimRow; first: boolean }) {
   );
 }
 
-/** 홈 (명세서 4.1 Main — 시안 A·B·C 중 결정 전이라 현재안) */
+/** BOB_APP 기본 홈(Main). 화면의 수치와 이동은 기존 데이터 흐름을 사용한다. */
 export default function HomeScreen() {
   const styles = useStyles();
   const home = useHome();
@@ -82,26 +86,24 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <Row justify="space-between">
-        <Row gap={2} align="baseline">
-          <Text variant="title">{copy.main.logo}</Text>
-          <Text variant="label" tone="tertiary">
-            {copy.main.tagline}
-          </Text>
-        </Row>
-      </Row>
+      <View style={styles.header}>
+        <Brand label={copy.main.logo} tagline={copy.main.tagline} />
+        <Pressable style={styles.bell} accessibilityRole="button" accessibilityLabel={copy.check.title} onPress={() => router.push('/check')}>
+          <Icon name="bell" />
+        </Pressable>
+      </View>
 
       {/* 오늘의 질문 */}
       {home.todayCount > 0 ? (
         <Card tone="brand">
           <Stack gap={4}>
             <Row justify="space-between">
-              <Text variant="label" tone="inverse">
+              <Text variant="label" tone="onBrand">
                 {copy.main.todayLabel(copy.main.notifyTimeShort)}
               </Text>
               <Badge label={copy.main.todayCount(home.todayCount)} tone="onBrand" />
             </Row>
-            <Text variant="title" tone="inverse">
+            <Text variant="title" tone="onBrand" style={styles.headline}>
               {copy.main.todayHeadline}
             </Text>
             <Button label={copy.main.todayCta} variant="onBrand" size="lg" fullWidth onPress={() => router.push('/check')} />

@@ -26,13 +26,13 @@ type Props = {
 
 const useStyles = makeStyles((t) => ({
   root: { flex: 1, backgroundColor: t.color.bg.canvas },
-  content: { padding: t.space[5], gap: t.space[4] },
+  content: { padding: t.space[5], gap: t.space[3] },
   fill: { flex: 1 },
   footer: {
     paddingHorizontal: t.space[5],
     paddingVertical: t.space[3],
     borderTopWidth: 1,
-    borderTopColor: t.color.border.default,
+    borderTopColor: t.color.border.navigation,
     backgroundColor: t.color.bg.surface,
   },
 }));

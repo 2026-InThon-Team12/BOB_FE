@@ -34,9 +34,9 @@ export function Badge({ label, tone = 'neutral' }: Props) {
   const map: Record<BadgeTone, { bg: string; text: TextTone }> = {
     neutral: { bg: theme.color.bg.subtle, text: 'secondary' },
     brand: { bg: theme.color.brand.subtle, text: 'brand' },
-    brandSolid: { bg: theme.color.brand.solid, text: 'inverse' },
-    /** 파란 카드 위 ("3개 품목") */
-    onBrand: { bg: theme.color.brand.onSolidSubtle, text: 'inverse' },
+    brandSolid: { bg: theme.color.brand.solid, text: 'onBrand' },
+    /** 노란 카드 위 ("3개 품목") */
+    onBrand: { bg: theme.color.brand.onSolidSubtle, text: 'onBrand' },
     success: { bg: theme.color.success.subtle, text: 'success' },
     warning: { bg: theme.color.warning.subtle, text: 'warning' },
     danger: { bg: theme.color.danger.subtle, text: 'danger' },

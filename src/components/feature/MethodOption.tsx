@@ -8,12 +8,13 @@ type Props = {
   title: string;
   body: string;
   badge?: string;
-  /** 추천 방법 (파란 테두리) */
+  /** 추천 방법 (갈색 테두리) */
   highlighted?: boolean;
   onPress: () => void;
 };
 
 const useStyles = makeStyles((t) => ({
+  neutralIcon: { backgroundColor: t.color.bg.subtle },
   iconBox: {
     width: 44,
     height: 44,
@@ -28,13 +29,13 @@ const useStyles = makeStyles((t) => ({
 export function MethodOption({ icon, title, body, badge, highlighted, onPress }: Props) {
   const styles = useStyles();
   return (
-    <Card selected={highlighted} onPress={onPress} accessibilityLabel={title}>
+    <Card padding={4} selected={highlighted} onPress={onPress} accessibilityLabel={title}>
       <Row gap={4} align="flex-start">
-        <View style={styles.iconBox}>
-          <Icon name={icon} tone="brand" />
+        <View style={[styles.iconBox, !highlighted && styles.neutralIcon]}>
+          <Icon name={icon} tone={highlighted ? 'brand' : 'primary'} />
         </View>
         <Stack flex={1} gap={1}>
-          <Row gap={2}>
+          <Row gap={2} wrap>
             <Text variant="heading">{title}</Text>
             {badge && <Badge label={badge} tone="brandSolid" />}
           </Row>

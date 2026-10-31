@@ -57,7 +57,7 @@ export function AnswerButtons({ labels, hints, onAnswer, disabled, strengths }: 
               pressed && { opacity: theme.motion.pressedOpacity },
             ]}
           >
-            <Icon name={b.icon} size="lg" tone={b.primary ? 'inverse' : 'primary'} />
+            <Icon name={b.icon} size="lg" tone={b.primary ? 'onBrand' : 'primary'} />
           </Pressable>
           </Animated.View>
           <Text variant="caption" weight="500" tone={b.primary ? 'brand' : 'secondary'}>

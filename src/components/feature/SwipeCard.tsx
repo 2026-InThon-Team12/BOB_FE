@@ -220,7 +220,7 @@ export function SwipeCard({ children, onSwipe, position, overlays, ref }: Props)
             <View style={styles.overlayIcon}>
               <Icon name={overlays[d].icon} size="xl" color={overlays[d].color} />
             </View>
-            <Text variant="display" tone="inverse">
+            <Text variant="display" tone={d === 'right' ? 'onBrand' : 'inverse'}>
               {overlays[d].label}
             </Text>
           </Stack>

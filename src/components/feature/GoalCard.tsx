@@ -33,7 +33,7 @@ export function GoalCard({ name, price, imageUri, saved, ratio, eta, dailySaving
             {copy.goal.percent(ratio)}
           </Text>
         </Row>
-        <ProgressBar value={ratio} accessibilityLabel={`${name} ${copy.goal.percent(ratio)}`} />
+        <ProgressBar value={ratio} size="lg" accessibilityLabel={`${name} ${copy.goal.percent(ratio)}`} />
         <Row justify="space-between">
           <Text variant="label" tone="secondary">
             {copy.goal.savedLabel}{' '}

@@ -125,7 +125,7 @@ export default function ReasonsScreen() {
             onPress={() => setCalendarOpen((o) => !o)}
             accessibilityRole="button"
             accessibilityLabel={copy.register.saleEndQuestion}
-            style={[styles.dateField, { borderColor: calendarOpen ? theme.color.brand.solid : theme.color.border.default }]}
+            style={[styles.dateField, { borderColor: calendarOpen ? theme.color.border.focus : theme.color.border.default }]}
           >
             <Icon name="calendar" size="sm" tone="brand" />
             <Text variant="bodyStrong" tone={step.saleEndsAt ? 'primary' : 'disabled'}>

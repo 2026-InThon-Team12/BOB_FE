@@ -61,7 +61,7 @@ function RootNavigator() {
 function ThemedApp() {
   const { themeScheme } = useSettings();
   return (
-    <ThemeProvider scheme={themeScheme ?? undefined}>
+    <ThemeProvider scheme={themeScheme ?? 'light'}>
       <RootNavigator />
     </ThemeProvider>
   );

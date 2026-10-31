@@ -1,5 +1,6 @@
 // UI 프리미티브 — 시각 스타일은 이 폴더 안에만 둔다 (디자인 시안 적용 지점 2)
 export { Badge, type BadgeTone } from './Badge';
+export { Brand } from './Brand';
 export { BottomSheet } from './BottomSheet';
 export { Button, type ButtonSize, type ButtonVariant } from './Button';
 export { Card, type CardTone } from './Card';

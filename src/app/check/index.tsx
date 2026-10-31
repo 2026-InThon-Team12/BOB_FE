@@ -1,26 +1,68 @@
-import { reflectionCopy } from '@/constants/copy';
 import { router } from 'expo-router';
-import { ItemSummary } from '@/components/feature';
+import { View } from 'react-native';
+
 import { ReflectionAnswerForm } from '@/components/feature/ReflectionAnswerForm';
-import { Button, Card, Screen, ScreenHeader, Stack, Text } from '@/components/ui';
-import { useTodayCheck } from '@/features/simulation/useTodayCheck';
+import { Button, Card, EmptyState, Row, Screen, ScreenHeader, SegmentedProgress, Stack, Text, Thumbnail } from '@/components/ui';
+import { CATEGORY_LABELS } from '@/constants/categories';
+import { copy, reflectionCopy } from '@/constants/copy';
 import type { AnswerSpec } from '@/data';
+import { useTodayCheck } from '@/features/simulation/useTodayCheck';
+import { formatWon } from '@/lib/format';
 import { goBack } from '@/lib/navigation';
+import { makeStyles } from '@/theme';
+
+const useStyles = makeStyles((t) => ({
+  divider: { height: 1, backgroundColor: t.color.border.divider },
+  question: { minHeight: t.space[12] * 2, justifyContent: 'center' },
+}));
+
+/** DailyCheck card layout, retaining each AI question's actual answer schema. */
 export default function TodayCheckScreen() {
   const check = useTodayCheck();
+  const styles = useStyles();
   const entry = check.current;
-  return <Screen header={<ScreenHeader title={reflectionCopy.todayTitle} onBack={()=>goBack('/')} />} edges={['top','bottom']}>
-    {check.loading ? <Text>{reflectionCopy.loadingQuestions}</Text> : check.error ? <Stack><Text tone="warning">{check.error}</Text><Button label={reflectionCopy.retry} onPress={check.retry}/></Stack> : entry ? <Stack gap={4}>
-      <ItemSummary name={entry.item.name} price={entry.item.price} category={entry.item.category} imageUri={entry.item.imageUri}/>
-      <Text tone="secondary">{entry.question.phase === 'post' ? reflectionCopy.post : reflectionCopy.pre} · {reflectionCopy.remaining(check.entries.length)}</Text>
-      <Card><Stack gap={3}><Text variant="title">{entry.text}</Text>
-        {entry.question.reference && <Text tone="secondary">{entry.question.reference}</Text>}
-        <Text variant="caption" tone="secondary">{entry.question.generationMethod === 'AI' ? reflectionCopy.aiQuestion : reflectionCopy.fallbackQuestion}</Text>
-        <ReflectionAnswerForm key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer}/>
-      </Stack></Card>
-    </Stack> : <Text variant="heading">{reflectionCopy.allAnswered}</Text>}
-    {check.answered.map(a=><Button key={a.questionId} variant="ghost" label={reflectionCopy.edit(a.name,a.label ?? '')} onPress={()=>check.edit(a.questionId)}/>)}
-    {check.awaitingDecision.map(item=><Button key={item.id} label={reflectionCopy.result(item.name)} onPress={()=>router.push({pathname:'/item/[id]/result',params:{id:item.id}})}/>)}
-    <Button label={reflectionCopy.home} variant="ghost" onPress={()=>router.replace('/')}/>
-  </Screen>;
+  const total = check.answered.length + check.entries.length;
+
+  return (
+    <Screen
+      header={<ScreenHeader
+        title={reflectionCopy.todayTitle}
+        onBack={() => goBack('/')}
+        backIcon="close"
+        backLabel={copy.common.back}
+        right={total > 0 ? <Text variant="label" tone="secondary">{check.answered.length} / {total}</Text> : undefined}
+      />}
+      edges={['top', 'bottom']}
+    >
+      {total > 0 && <SegmentedProgress total={total} filled={check.answered.length} accessibilityLabel={reflectionCopy.todayTitle} />}
+      {check.loading ? (
+        <Card><Text tone="secondary">{reflectionCopy.loadingQuestions}</Text></Card>
+      ) : check.error ? (
+        <Card tone="warning"><Stack><Text tone="warning">{check.error}</Text><Button label={reflectionCopy.retry} onPress={check.retry} /></Stack></Card>
+      ) : entry ? (
+        <Card floating>
+          <Stack gap={4}>
+            <Row gap={3}>
+              <Thumbnail uri={entry.item.imageUri} placeholder={copy.common.imagePlaceholder} />
+              <Stack flex={1} gap={1}>
+                <Text variant="heading" numberOfLines={2}>{entry.item.name}</Text>
+                <Text variant="caption" tone="tertiary">{CATEGORY_LABELS[entry.item.category]} · {formatWon(entry.item.price)}</Text>
+              </Stack>
+            </Row>
+            <View style={styles.divider} />
+            <Text variant="label" tone="secondary">{entry.question.phase === 'post' ? reflectionCopy.post : reflectionCopy.pre}</Text>
+            <View style={styles.question}><Text variant="title">{entry.text}</Text></View>
+            {entry.question.reference && <Text tone="secondary">{entry.question.reference}</Text>}
+            <ReflectionAnswerForm key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer} />
+            <Text variant="caption" tone="tertiary">{entry.question.generationMethod === 'AI' ? reflectionCopy.aiQuestion : reflectionCopy.fallbackQuestion}</Text>
+          </Stack>
+        </Card>
+      ) : (
+        <Card><EmptyState icon="check" title={reflectionCopy.allAnswered} /></Card>
+      )}
+      {check.answered.map(a => <Button key={a.questionId} variant="ghost" label={reflectionCopy.edit(a.name, a.label ?? '')} onPress={() => check.edit(a.questionId)} />)}
+      {check.awaitingDecision.map(item => <Button key={item.id} label={reflectionCopy.result(item.name)} onPress={() => router.push({ pathname: '/item/[id]/result', params: { id: item.id } })} />)}
+      <Button label={reflectionCopy.home} variant="ghost" onPress={() => router.replace('/')} />
+    </Screen>
+  );
 }

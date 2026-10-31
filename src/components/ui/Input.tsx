@@ -23,7 +23,7 @@ const useStyles = makeStyles((t) => ({
     paddingHorizontal: t.space[4],
     borderRadius: t.radius.md,
     borderWidth: 1,
-    backgroundColor: t.color.bg.surface,
+    backgroundColor: t.color.bg.field,
     gap: t.space[2],
   },
   input: {

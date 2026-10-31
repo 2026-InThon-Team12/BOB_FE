@@ -1,6 +1,6 @@
 /**
  * 디자인 토큰 — 디자인 시안 적용 지점 1.
- * 값은 디자인 시안 `Buy or Bye (BoB).html`에서 뽑았다.
+ * 값은 디자인 시안 `BOB_APP/BoB_앱디자인.html (b639928)`에서 뽑았다.
  *
  * - `palette`는 원시 색상값이다. 이 파일 밖에서는 직접 쓰지 않는다.
  * - 앱 코드는 의미 기반 이름(`color.text.primary`, `space[4]` …)만 사용한다.
@@ -9,28 +9,35 @@
 const palette = {
   white: '#FFFFFF',
   black: '#000000',
-  // 시안 회색 계열
-  gray50: '#F2F4F7', // 화면 배경
-  gray100: '#EEF1F5', // 이미지 자리, 보조 배경
-  gray150: '#E6EAF0', // 진행 바 트랙
-  gray200: '#DCE1E8', // 테두리
-  gray300: '#B5BCC7', // 예측 막대
-  gray400: '#9AA1AD', // 비활성 텍스트
-  gray500: '#646B78', // 보조 텍스트
-  gray600: '#4B5262', // 본문 보조
-  gray700: '#3A404C',
-  gray900: '#15181E', // 본문, 어두운 카드
-  gray950: '#0C0E12',
+  brandInk: '#8A5A00',
+  bye: '#5A3A28',
+  byePressed: '#4A3428',
+  field: '#FFFBF4',
+  divider: '#F2E9DB',
+  navigationBorder: '#ECE1CF',
+  backdrop: '#EFE6D8',
+  // 크림 · 갈색 중립 계열
+  earth50: '#FAF4EA', // 화면 배경
+  earth100: '#F4ECDF', // 이미지 자리, 보조 배경
+  earth150: '#F0E4CF', // 진행 바 트랙
+  earth200: '#E6D8C2', // 테두리
+  earth300: '#CDBA9E', // 예측 막대
+  earth400: '#B49F87', // 비활성 텍스트
+  earth500: '#7A6556', // 보조 텍스트
+  earth600: '#6A5446', // 본문 보조
+  earth700: '#4A3428',
+  earth900: '#231514', // 본문, 어두운 카드
+  earth950: '#170F0C',
   // 브랜드 (Buy)
-  blue50: '#EBF1FF',
-  blue100: '#DCE6FF',
-  blue400: '#5B82F0',
-  blue500: '#2556E0',
-  blue600: '#1D45B8',
-  blue950: '#121C38',
+  amber50: '#FFF2CF',
+  amber100: '#EADFCB',
+  amber400: '#FFC970',
+  amber500: '#FCBF50',
+  amber600: '#F2B33D',
+  amber950: '#3D2A13',
   // 주의 · Bye
   orange50: '#FFF0E6',
-  orange200: '#FFB088',
+  orange200: '#FFC970',
   orange600: '#C4440F',
   orange700: '#9A3409',
   orange800: '#7A2A07',
@@ -38,12 +45,12 @@ const palette = {
   red50: '#FDECEC',
   red200: '#F5C2C0',
   red700: '#B42318',
-  switchOff: '#C9CED8',
+  switchOff: '#DCCDB5',
   gold: '#F2B33D',
-  shelfBg: '#BCC2CC',
-  shelfWall: '#AAB1BC',
-  shelfPlank: '#E4E7EC',
-  shelfStamp: '#45484F',
+  shelfBg: '#C8B497',
+  shelfWall: '#A08B6B',
+  shelfPlank: '#EADFCB',
+  shelfStamp: '#5A3A28',
   green500: '#16A36A',
   green50: '#E6F6EE',
   green950: '#0E2A1E',
@@ -51,19 +58,21 @@ const palette = {
 
 const lightColor = {
   bg: {
-    canvas: palette.gray50,
+    canvas: palette.earth50,
     surface: palette.white,
-    subtle: palette.gray100,
+    subtle: palette.earth100,
+    field: palette.field,
     /** 리포트 "이번 달 발견" 같은 어두운 강조 카드 */
-    inverse: palette.gray900,
+    inverse: palette.earth900,
   },
   text: {
-    primary: palette.gray900,
-    secondary: palette.gray600,
-    tertiary: palette.gray500,
-    disabled: palette.gray400,
+    primary: palette.earth900,
+    secondary: palette.earth600,
+    tertiary: palette.earth500,
+    disabled: palette.earth400,
     inverse: palette.white,
-    brand: palette.blue500,
+    brand: palette.brandInk,
+    onBrand: palette.earth900,
     success: palette.green500,
     warning: palette.orange600,
     danger: palette.orange600,
@@ -72,21 +81,24 @@ const lightColor = {
     alert: palette.red700,
   },
   border: {
-    default: palette.gray200,
-    strong: palette.gray300,
-    focus: palette.blue500,
+    default: palette.earth200,
+    strong: palette.earth300,
+    focus: palette.brandInk,
+    divider: palette.divider,
+    navigation: palette.navigationBorder,
   },
   brand: {
-    solid: palette.blue500,
-    pressed: palette.blue600,
-    subtle: palette.blue50,
+    solid: palette.amber500,
+    pressed: palette.amber600,
+    subtle: palette.amber50,
     /** 선택된 칩·카드 테두리 */
-    subtleBorder: palette.blue100,
-    onSolid: palette.white,
-    /** 파란 바탕 위 반투명 흰색 (배지) */
-    onSolidSubtle: 'rgba(255,255,255,0.18)',
+    subtleBorder: palette.amber100,
+    onSolid: palette.earth900,
+    /** 노란 바탕 위 반투명 흰색 (배지) */
+    onSolidSubtle: 'rgba(255,255,255,0.35)',
   },
-  /** "Bye" 버튼, 함정·주의 안내 */
+  bye: { solid: palette.bye, pressed: palette.byePressed },
+  /** 함정·주의 안내 */
   warning: { solid: palette.orange600, pressed: palette.orange700, subtle: palette.orange50, onSubtle: palette.orange800 },
   success: { solid: palette.green500, subtle: palette.green50 },
   danger: { solid: palette.orange600, subtle: palette.orange50 },
@@ -95,15 +107,15 @@ const lightColor = {
   switchOff: palette.switchOff,
   /** 일러스트(동전·선물·색종이) 전용 */
   gold: palette.gold,
-  /** 스와이프 "딱히 없었어요" 오버레이 (명세서 #3A404C) */
-  swipeNo: palette.gray700,
+  /** 스와이프 "딱히 없었어요" 오버레이 (명세서 #4A3428) */
+  swipeNo: palette.earth700,
   /** 목표 진열장 */
   shelf: { bg: palette.shelfBg, wall: palette.shelfWall, plank: palette.shelfPlank, stamp: palette.shelfStamp },
-  track: palette.gray150,
+  track: palette.earth150,
   /** 예측 vs 실제 막대의 "예측" */
-  predicted: palette.gray300,
-  overlay: 'rgba(21,24,30,0.4)',
-  frame: { backdrop: palette.gray200 },
+  predicted: palette.earth300,
+  overlay: 'rgba(35,21,20,0.4)',
+  frame: { backdrop: palette.backdrop },
 };
 
 /** 리터럴 색상값을 string으로 넓혀 라이트/다크가 같은 구조를 공유하게 한다 */
@@ -113,18 +125,20 @@ export type ColorTokens = Widen<typeof lightColor>;
 /** 시안에는 다크 모드가 없다 — 라이트 시안을 기준으로 만든 임시 값 */
 const darkColor: ColorTokens = {
   bg: {
-    canvas: palette.gray950,
-    surface: palette.gray900,
-    subtle: palette.gray700,
-    inverse: palette.gray50,
+    canvas: palette.earth950,
+    surface: palette.earth900,
+    subtle: palette.earth700,
+    field: palette.earth900,
+    inverse: palette.earth50,
   },
   text: {
-    primary: palette.gray50,
-    secondary: palette.gray300,
-    tertiary: palette.gray400,
-    disabled: palette.gray500,
-    inverse: palette.gray900,
-    brand: palette.blue400,
+    primary: palette.earth50,
+    secondary: palette.earth300,
+    tertiary: palette.earth400,
+    disabled: palette.earth500,
+    inverse: palette.earth900,
+    brand: palette.amber400,
+    onBrand: palette.earth900,
     success: palette.green500,
     warning: palette.orange200,
     danger: palette.orange200,
@@ -132,28 +146,31 @@ const darkColor: ColorTokens = {
     alert: palette.red200,
   },
   border: {
-    default: palette.gray700,
-    strong: palette.gray600,
-    focus: palette.blue400,
+    default: palette.earth700,
+    strong: palette.earth600,
+    focus: palette.amber400,
+    divider: palette.earth700,
+    navigation: palette.earth700,
   },
   brand: {
-    solid: palette.blue500,
-    pressed: palette.blue600,
-    subtle: palette.blue950,
-    subtleBorder: palette.blue600,
-    onSolid: palette.white,
-    onSolidSubtle: 'rgba(255,255,255,0.18)',
+    solid: palette.amber500,
+    pressed: palette.amber600,
+    subtle: palette.amber950,
+    subtleBorder: palette.amber600,
+    onSolid: palette.earth900,
+    onSolidSubtle: 'rgba(255,255,255,0.35)',
   },
+  bye: { solid: palette.bye, pressed: palette.byePressed },
   warning: { solid: palette.orange600, pressed: palette.orange700, subtle: palette.orange950, onSubtle: palette.orange200 },
   success: { solid: palette.green500, subtle: palette.green950 },
   danger: { solid: palette.orange600, subtle: palette.orange950 },
   alert: { text: palette.red200, subtle: palette.red700, border: palette.red700 },
-  switchOff: palette.gray600,
+  switchOff: palette.earth600,
   gold: palette.gold,
-  swipeNo: palette.gray600,
-  shelf: { bg: palette.gray700, wall: palette.gray600, plank: palette.gray500, stamp: palette.gray950 },
-  track: palette.gray700,
-  predicted: palette.gray500,
+  swipeNo: palette.earth600,
+  shelf: { bg: palette.earth700, wall: palette.earth600, plank: palette.earth500, stamp: palette.earth950 },
+  track: palette.earth700,
+  predicted: palette.earth500,
   overlay: 'rgba(0,0,0,0.6)',
   frame: { backdrop: palette.black },
 };
@@ -196,6 +213,7 @@ export const font = {
 
 /** 시안 글자 크기: 44·36(큰 숫자) / 22(화면 제목) / 17(카드 제목) / 15(본문) / 13·12(보조) */
 export const typography = {
+  cardTitle: { fontSize: 21, lineHeight: 30, fontWeight: '700' },
   hero: { fontSize: 36, lineHeight: 44, fontWeight: '700' },
   display: { fontSize: 30, lineHeight: 38, fontWeight: '700' },
   title: { fontSize: 22, lineHeight: 30, fontWeight: '700' },
@@ -212,14 +230,14 @@ export const elevation = {
   card: {},
   /** 떠 있는 카드 (오늘의 질문 카드 스택) */
   float: {
-    shadowColor: palette.gray900,
+    shadowColor: palette.earth900,
     shadowOpacity: 0.14,
     shadowRadius: 32,
     shadowOffset: { width: 0, height: 12 },
     elevation: 8,
   },
   raised: {
-    shadowColor: palette.gray900,
+    shadowColor: palette.earth900,
     shadowOpacity: 0.05,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },

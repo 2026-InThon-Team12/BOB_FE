@@ -134,8 +134,8 @@ export default function UiCatalogScreen() {
         </Card>
         <Card tone="brand">
           <Stack gap={3}>
-            <Text variant="label" tone="inverse">오늘의 질문 · 오후 8:00</Text>
-            <Text variant="title" tone="inverse">오늘 하루, 이 물건들이 있었으면 했나요?</Text>
+            <Text variant="label" tone="onBrand">오늘의 질문 · 오후 8:00</Text>
+            <Text variant="title" tone="onBrand">오늘 하루, 이 물건들이 있었으면 했나요?</Text>
             <Button label="1분 만에 답하기" variant="onBrand" fullWidth onPress={() => {}} />
           </Stack>
         </Card>

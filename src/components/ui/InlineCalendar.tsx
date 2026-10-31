@@ -84,7 +84,7 @@ export function InlineCalendar({ value, minDate, onChange, weekdayLabels, monthL
               style={styles.cell}
             >
               <View style={[styles.dot, selected && { backgroundColor: theme.color.brand.solid }]}>
-                <Text variant="label" tone={selected ? 'inverse' : disabled ? 'disabled' : 'primary'}>
+                <Text variant="label" tone={selected ? 'onBrand' : disabled ? 'disabled' : 'primary'}>
                   {Number(date.slice(8))}
                 </Text>
               </View>
