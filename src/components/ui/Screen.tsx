@@ -18,6 +18,8 @@ type Props = {
   titleAction?: ReactNode;
   /** 기본 true. 카드 스와이프처럼 스크롤이 없어야 하는 화면은 false */
   scroll?: boolean;
+  /** 자식 카드의 제스처 동안만 스크롤을 잠근다. ScrollView 자체는 유지한다. */
+  scrollEnabled?: boolean;
   /** 화면 하단에 고정되는 영역 (주요 버튼 등) */
   footer?: ReactNode;
   /** 네비게이터 헤더가 상단 안전 영역을 처리하면 ['bottom'] 등으로 바꾼다 */
@@ -45,6 +47,7 @@ export function Screen({
   subtitle,
   titleAction,
   scroll = true,
+  scrollEnabled = true,
   footer,
   edges = ['top'],
 }: Props) {
@@ -72,7 +75,7 @@ export function Screen({
     <SafeAreaView style={styles.root} edges={edges}>
       {topBar}
       {scroll ? (
-        <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView scrollEnabled={scrollEnabled} style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {header}
           {children}
         </ScrollView>

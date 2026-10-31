@@ -56,8 +56,15 @@ export function swipeDirection(dx: number, dy: number): SwipeDirection | null {
 }
 
 /** 카드 하나의 제스처 상태 (React 바깥의 일반 객체 — 처리기 안에서만 읽고 쓴다) */
-function createSwipeController(pos: Animated.ValueXY) {
+export function createSwipeController(pos: Animated.ValueXY) {
   let busy = false;
+  let touching = false;
+  let onGestureActiveChange: (active: boolean) => void = () => {};
+  const endInteraction = () => {
+    if (!touching) return;
+    touching = false;
+    onGestureActiveChange(false);
+  };
   let onSwipe: (direction: SwipeDirection) => void = () => {};
   const timing = () => ({ duration: reduceMotion ? 0 : SWIPE.durationMs, easing: Easing.out(Easing.ease), useNativeDriver });
 
@@ -69,16 +76,28 @@ function createSwipeController(pos: Animated.ValueXY) {
     Animated.timing(pos, { toValue: to, ...timing() }).start(() => onSwipe(direction));
   };
   /** 새로 끌기 시작하면 아직 돌아가는 중인 되돌림 애니메이션을 멈춘다 — 안 멈추면 끄는 위치를 덮어쓴다 */
-  const grab = () => pos.stopAnimation();
-  const reset = () => {busy = false; Animated.timing(pos, { toValue: { x: 0, y: 0 }, ...timing() }).start();};
-  const move = (dx: number, dy: number) => pos.setValue({ x: dx, y: Math.min(dy, 40) });
+  const grab = () => {
+    if (busy) return;
+    touching = true;
+    onGestureActiveChange(true);
+    pos.stopAnimation();
+  };
+  const reset = () => {endInteraction(); busy = false; Animated.timing(pos, { toValue: { x: 0, y: 0 }, ...timing() }).start();};
+  const move = (dx: number, dy: number) => {if (touching && !busy) pos.setValue({ x: dx, y: Math.min(dy, 40) });};
   const release = (dx: number, dy: number) => {
+    if (!touching) return;
+    endInteraction();
     const dir = swipeDirection(dx, dy);
     if (dir) fling(dir);
     else reset();
   };
   const responder = PanResponder.create({
+    // Claim touches inside the card before its parent ScrollView starts scrolling.
+    onStartShouldSetPanResponder: () => !busy,
+    onStartShouldSetPanResponderCapture: () => !busy,
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 6 || Math.abs(g.dy) > 6,
+    onPanResponderTerminationRequest: () => false,
+    onShouldBlockNativeResponder: () => true,
     onPanResponderGrant: grab,
     onPanResponderMove: (_, g) => move(g.dx, g.dy),
     onPanResponderRelease: (_, g) => release(g.dx, g.dy),
@@ -92,6 +111,8 @@ function createSwipeController(pos: Animated.ValueXY) {
     move,
     release,
     responder,
+    endInteraction,
+    setOnGestureActiveChange: (fn: (active: boolean) => void) => {onGestureActiveChange = fn;},
     isBusy: () => busy,
     setOnSwipe: (fn: (direction: SwipeDirection) => void) => {
       onSwipe = fn;
@@ -104,6 +125,7 @@ type Overlay = { label: string; icon: IconName; color: string };
 type Props = {
   children: ReactNode;
   onSwipe: (direction: SwipeDirection) => void;
+  onGestureActiveChange?: (active: boolean) => void;
   /** 끄는 위치 — 화면이 갖고 있어서 뒤 카드·답 버튼도 같이 반응한다. 카드가 바뀌면 0으로 돌아간다 */
   position: Animated.ValueXY;
   /** 방향별 오버레이 (명세서: 있었어요 buy · 없었어요 진회색 · 모르겠어요 bye) */
@@ -139,7 +161,7 @@ const useStyles = makeStyles((t) => ({
  *   새로 그려진 카드의 드래그를 받지 못해서 웹은 직접 처리한다.
  * 다음 카드는 부모가 key를 바꿔 새로 그린다.
  */
-export function SwipeCard({ children, onSwipe, position, overlays, ref }: Props) {
+export function SwipeCard({ children, onSwipe, onGestureActiveChange, position, overlays, ref }: Props) {
   const styles = useStyles();
   const theme = useTheme();
   const [gesture] = useState(() => createSwipeController(position));
@@ -148,6 +170,10 @@ export function SwipeCard({ children, onSwipe, position, overlays, ref }: Props)
   // 새 카드는 제자리에서 시작
   useEffect(() => position.setValue({ x: 0, y: 0 }), [position]);
   useEffect(() => gesture.setOnSwipe(onSwipe), [gesture, onSwipe]);
+  useEffect(() => {
+    gesture.setOnGestureActiveChange(onGestureActiveChange ?? (() => {}));
+    return () => gesture.endInteraction();
+  }, [gesture, onGestureActiveChange]);
   useImperativeHandle(ref, () => ({ swipe: gesture.fling, reset: gesture.reset }), [gesture]);
 
   // 웹: 포인터 이벤트로 직접 끌기 처리

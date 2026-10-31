@@ -9,7 +9,7 @@ import { SwipeCard, type SwipeCardHandle, type SwipeDirection } from './SwipeCar
 import { AnswerButtons } from './AnswerButtons';
 
 export const isThreeWay = (spec: AnswerSpec) => spec.type === 'CHOICE' && spec.options?.length === 3 && ['YES','NO','UNSURE'].every(code => spec.options?.some(o => o.code === code));
-export function ReflectionSwipe({children, spec, onAnswer}: {children: ReactNode; spec: AnswerSpec; onAnswer: (value: ReflectionAnswer, label: string) => void | Promise<void>}) {
+export function ReflectionSwipe({children, spec, onAnswer, onGestureActiveChange}: {children: ReactNode; spec: AnswerSpec; onAnswer: (value: ReflectionAnswer, label: string) => void | Promise<void>; onGestureActiveChange?: (active: boolean) => void}) {
   const [position] = useState(() => new Animated.ValueXY());
   const ref = useRef<SwipeCardHandle>(null);
   const theme = useTheme();
@@ -20,7 +20,7 @@ export function ReflectionSwipe({children, spec, onAnswer}: {children: ReactNode
   const directions: SwipeDirection[] = ['right','left','up'];
   const answer = async (direction: SwipeDirection) => {const i = directions.indexOf(direction);setFailed(false);try {await onAnswer({choice_code:swipeAnswer(direction)}, labels[i]);} catch {setFailed(true);ref.current?.reset();}};
   return <Stack gap={4}>
-    <SwipeCard ref={ref} position={position} onSwipe={answer} overlays={{
+    <SwipeCard ref={ref} position={position} onSwipe={answer} onGestureActiveChange={onGestureActiveChange} overlays={{
       right:{label:labels[0],icon:'check',color:theme.color.brand.solid},
       left:{label:labels[1],icon:'close',color:theme.color.swipeNo},
       up:{label:labels[2],icon:'help',color:theme.color.swipeUnsure},

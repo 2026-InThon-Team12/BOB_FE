@@ -1,6 +1,7 @@
 import { useFirstVisitHelp } from '@/features/help/useFirstVisitHelp';
 import { router } from 'expo-router';
 import { View } from 'react-native';
+import { useState } from 'react';
 
 import { ReflectionSwipe } from '@/components/feature/ReflectionSwipe';
 import { isSwipeQuestion } from '@/lib/reflection';
@@ -21,6 +22,7 @@ const useStyles = makeStyles((t) => ({
 /** Purchase reflection cards use one three-direction swipe contract. */
 export default function TodayCheckScreen() {
   const check = useTodayCheck();
+  const [cardTouching, setCardTouching] = useState(false);
   const styles = useStyles();
   const entry = check.current;
   useFirstVisitHelp('daily', !check.loading && !!entry && entry.question.phase === 'pre');
@@ -28,6 +30,7 @@ export default function TodayCheckScreen() {
 
   return (
     <Screen
+      scrollEnabled={!cardTouching}
       header={<ScreenHeader
         title={reflectionCopy.todayTitle}
         onBack={() => goBack('/')}
@@ -50,7 +53,7 @@ export default function TodayCheckScreen() {
           <Button label={copy.common.close} onPress={() => check.edit(null)} />
         </Stack></Card>
       ) : entry ? (
-        <ReflectionSwipe key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer}><Card floating>
+        <ReflectionSwipe key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer} onGestureActiveChange={setCardTouching}><Card floating>
           <Stack gap={4}>
             <Row gap={3}>
               <Thumbnail uri={entry.item.imageUri} placeholder={copy.common.imagePlaceholder} />
