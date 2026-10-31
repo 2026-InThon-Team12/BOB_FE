@@ -82,6 +82,23 @@ export const questionTasks = (today: Json): Task[] => [
   })),
 ];
 export const taskKey = (t: Task) => `${t.kind}:${t.subjectId}:${t.date}`;
+export const SWIPE_QUESTION_VERSION = 'swipe-v2';
+export const swipeAnswer = (direction: 'right' | 'up' | 'left') =>
+  ({ right: 'YES', up: 'UNSURE', left: 'NO' } as const)[direction];
+export function isSwipeQuestion(q: Json): boolean {
+  const spec = object(q.answer_spec), options = rows(spec.options);
+  return q.template_version === SWIPE_QUESTION_VERSION && spec.type === 'CHOICE' &&
+    spec.interaction === 'SWIPE' && spec.polarity === 'PURCHASE_SUPPORT' &&
+    options.length === 3 && ['YES', 'UNSURE', 'NO'].every((code) => options.some((o) => o.code === code));
+}
+export function reflectionCounts(records: Json[]): Json {
+  const counts: Json = { YES: 0, UNSURE: 0, NO: 0 };
+  for (const q of records) {
+    const code = str(object(q.answer).choice_code);
+    if (isSwipeQuestion(q) && code in counts) counts[code] = num(counts[code]) + 1;
+  }
+  return counts;
+}
 export function validAnswer(spec: Json, answer: Json): boolean {
   const keys = ['choice_code', 'number_value', 'text_value', 'object_value'].filter((k) => answer[k] != null);
   if (keys.length !== 1) return false;

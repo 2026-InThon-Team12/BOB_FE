@@ -1,16 +1,15 @@
 import { useRef, useState } from 'react';
 import { Animated, View } from 'react-native';
-import { Button, Card, Chip, Icon, ProgressBar, Row, Stack, Text, Thumbnail } from '@/components/ui';
+import { Button, Card, ProgressBar, Row, Stack, Text, Thumbnail } from '@/components/ui';
 import {
   AnswerButtons,
   BarRow,
-  BucketOption,
   SwipeCard,
   type SwipeCardHandle,
   type SwipeDirection,
 } from '@/components/feature';
 import { apkCopy as c, apkMoney as money, apkPeriod } from '@/constants/apkCopy';
-import { htmlCopy as h, htmlReviewOptions } from '@/constants/htmlCopy';
+import { htmlCopy as h } from '@/constants/htmlCopy';
 import { copy } from '@/constants/copy';
 import {
   answerLabel,
@@ -21,199 +20,83 @@ import {
   seoulDate,
   str,
   taskKey,
-  validAnswer,
+  isSwipeQuestion,
+  reflectionCounts,
+  swipeAnswer,
   validMoney,
-  type Json,
 } from '@/lib/apkDomain';
 import { useTheme } from '@/theme';
 import { Action, Field, HtmlScreen, Panel, Product, Stat, useHtmlStyles, type VM } from './shared';
 
 export function Question({ vm }: { vm: VM }) {
-  const q = vm.question,
-    spec = object(q.answer_spec),
-    s = useHtmlStyles(),
-    theme = useTheme();
-  const [answer, setAnswer] = useState<Json>(object(q.answer)),
-    [retry, setRetry] = useState(0);
-  const [position] = useState(() => new Animated.ValueXY()),
-    swipe = useRef<SwipeCardHandle>(null);
-  const fields = object(spec.fields),
-    options = rows(spec.options),
-    tasks = questionTasks(vm.today);
-  const step = Math.max(
-    0,
-    tasks.findIndex((t) => vm.task && taskKey(t) === taskKey(vm.task)),
-  );
-  const yesNo =
-    options.length === 3 && ['YES', 'NO', 'UNSURE'].every((code) => options.some((o) => o.code === code));
+  const q = vm.question, spec = object(q.answer_spec), s = useHtmlStyles(), theme = useTheme();
+  const [retry, setRetry] = useState(0);
+  const [position] = useState(() => new Animated.ValueXY());
+  const swipe = useRef<SwipeCardHandle>(null);
+  const options = rows(spec.options), tasks = questionTasks(vm.today);
+  const step = Math.max(0, tasks.findIndex((t) => vm.task && taskKey(t) === taskKey(vm.task)));
   const label = (code: string) => str(options.find((o) => o.code === code)?.label);
   const saveChoice = async (direction: SwipeDirection) => {
     if (vm.busy) return;
-    const choice_code = { right: 'YES', left: 'NO', up: 'UNSURE' }[direction];
-    if (await vm.actions.answer({ choice_code })) vm.go('today');
+    if (await vm.actions.answer({ choice_code: swipeAnswer(direction) })) vm.go('today');
     else {
       position.setValue({ x: 0, y: 0 });
       setRetry((n) => n + 1);
     }
   };
-  const card = (
-    <View style={[s.questionCard, !yesNo && s.questionInputCard]}>
-      <Row gap={3}>
-        <Thumbnail size="sm" />
-        <Stack flex={1} gap={1}>
-          <Text variant="bodyStrong">{vm.task?.name}</Text>
-          <Text variant="caption" tone="secondary">
-            {str(q.question_date)}
-          </Text>
-        </Stack>
-      </Row>
-      <View style={s.divider} />
-      <Text variant="label">{h.questionImagine}</Text>
-      <Text variant="title">{str(q.question)}</Text>
-      <Stack flex={1} />
-      {q.usage_window != null && (
-        <Text variant="caption" tone="secondary">
-          {str(object(q.usage_window).start ?? object(q.usage_window).start_date)} ~{' '}
-          {str(object(q.usage_window).end ?? object(q.usage_window).end_date)}
-        </Text>
-      )}
-      {!!q.reference_text && (
-        <Card tone="warning" padding={3}>
-          <Row gap={2}>
-            <Icon name="ai" tone="warning" size="sm" />
-            <Stack flex={1}>
-              <Text variant="caption" tone="warning">
-                {str(q.reference_text)}
-              </Text>
-            </Stack>
-          </Row>
-        </Card>
-      )}
-    </View>
+  // Historical non-swipe answers retain their original meaning and remain readable.
+  if (!isSwipeQuestion(q)) return (
+    <HtmlScreen vm={vm} title={copy.check.title}>
+      <Panel>
+        <Text variant="title">{str(q.question)}</Text>
+        <Text variant="bodyStrong">{answerLabel(q)}</Text>
+        <Text variant="caption" tone="secondary">{h.legacyAnswer}</Text>
+      </Panel>
+    </HtmlScreen>
   );
   return (
-    <HtmlScreen
-      vm={vm}
-      title={copy.check.title}
-      right={<Text variant="label">{h.step(step + 1, Math.max(1, tasks.length))}</Text>}
-      footer={
-        !yesNo && (
-          <Action
-            vm={vm}
-            label={c.answer}
-            disabled={!validAnswer(spec, answer)}
-            run={() => vm.finish(vm.actions.answer(answer), 'today')}
-          />
-        )
-      }
-    >
+    <HtmlScreen vm={vm} title={copy.check.title}
+      right={<Text variant="label">{h.step(step + 1, Math.max(1, tasks.length))}</Text>}>
       <Row gap={1}>
         {tasks.map((t, i) => (
-          <Stack key={taskKey(t)} flex={1}>
-            <ProgressBar value={i <= step ? 1 : 0} size="sm" />
-          </Stack>
+          <Stack key={taskKey(t)} flex={1}><ProgressBar value={i <= step ? 1 : 0} size="sm" /></Stack>
         ))}
       </Row>
       <View pointerEvents={vm.busy ? 'none' : 'auto'}>
         <View style={s.backgroundCard} pointerEvents="none" />
-        {yesNo ? (
-          <SwipeCard
-            key={retry}
-            ref={swipe}
-            position={position}
-            onSwipe={(direction) => {
-              void saveChoice(direction);
-            }}
-            overlays={{
-              right: {
-                label: label('YES'),
-                icon: 'check',
-                color: theme.color.brand.solid,
-              },
-              left: {
-                label: label('NO'),
-                icon: 'close',
-                color: theme.color.swipeNo,
-              },
-              up: {
-                label: label('UNSURE'),
-                icon: 'help',
-                color: theme.color.warning.solid,
-              },
-            }}
-          >
-            {card}
-          </SwipeCard>
-        ) : (
-          card
-        )}
-      </View>
-      {yesNo ? (
-        <Stack paddingY={3}>
-          <AnswerButtons
-            labels={[label('YES'), label('NO'), label('UNSURE')]}
-            hints={[label('YES'), label('NO'), label('UNSURE')]}
-            disabled={vm.busy}
-            onAnswer={(i) => swipe.current?.swipe((['right', 'left', 'up'] as const)[i])}
-          />
-        </Stack>
-      ) : (
-        <Panel>
-          <Row gap={2} wrap>
-            {options.map((o) => (
-              <Chip
-                key={str(o.code)}
-                label={str(o.label)}
-                selected={answer.choice_code === o.code}
-                disabled={vm.busy}
-                onPress={() => setAnswer({ choice_code: o.code })}
-              />
-            ))}
-          </Row>
-          {spec.type === 'INTEGER' && (
-            <Field
-              label={`${c.number} (${spec.minimum} ~ ${spec.maximum})`}
-              value={str(answer.number_value)}
-              set={(v) => setAnswer(v ? { number_value: Number(v) } : {})}
-              numeric
-            />
-          )}
-          {spec.type === 'TEXT' && (
-            <Field
-              label={c.text}
-              value={str(answer.text_value)}
-              set={(v) =>
-                setAnswer({
-                  text_value: v.slice(0, num(spec.max_length ?? 300)),
-                })
-              }
-            />
-          )}
-          {spec.type === 'OBJECT' &&
-            Object.entries(fields).map(([key, field]) => (
-              <Stack key={key} gap={2}>
-                <Text variant="label">{str(object(field).label) || key}</Text>
-                <Row gap={2} wrap>
-                  {rows(object(field).options).map((o) => (
-                    <Chip
-                      key={str(o.code)}
-                      label={str(o.label)}
-                      selected={object(answer.object_value)[key] === o.code}
-                      onPress={() =>
-                        setAnswer({
-                          object_value: {
-                            ...object(answer.object_value),
-                            [key]: o.code,
-                          },
-                        })
-                      }
-                    />
-                  ))}
-                </Row>
+        <SwipeCard key={`${str(q.id)}:${retry}`} ref={swipe} position={position}
+          onSwipe={(direction) => { void saveChoice(direction); }}
+          overlays={{
+            right: { label: label('YES'), icon: 'check', color: theme.color.brand.solid },
+            left: { label: label('NO'), icon: 'close', color: theme.color.swipeNo },
+            up: { label: label('UNSURE'), icon: 'help', color: theme.color.warning.solid },
+          }}>
+          <View style={s.questionCard}>
+            <Row gap={3}>
+              <Thumbnail size="sm" />
+              <Stack flex={1} gap={1}>
+                <Text variant="bodyStrong">{vm.task?.name}</Text>
+                <Text variant="caption" tone="secondary">{str(q.question_date)}</Text>
               </Stack>
-            ))}
-        </Panel>
-      )}
+            </Row>
+            <View style={s.divider} />
+            <Text variant="label">
+              {vm.task?.kind === 'purchases' ? h.questionAfterPurchase : h.questionImagine}
+            </Text>
+            <Text variant="title">{str(q.question)}</Text>
+            <Stack flex={1} />
+            {!!q.reference_text && <Card tone="warning" padding={3}>
+              <Text variant="caption" tone="warning">{str(q.reference_text)}</Text>
+            </Card>}
+          </View>
+        </SwipeCard>
+      </View>
+      <Stack paddingY={3} gap={3}>
+        <Text variant="caption" tone="secondary" align="center">{h.swipeHint}</Text>
+        <AnswerButtons labels={[label('YES'), label('NO'), label('UNSURE')]}
+          hints={[label('YES'), label('NO'), label('UNSURE')]} disabled={vm.busy}
+          onAnswer={(i) => swipe.current?.swipe((['right', 'left', 'up'] as const)[i])} />
+      </Stack>
     </HtmlScreen>
   );
 }
@@ -222,6 +105,8 @@ export function Result({ vm }: { vm: VM }) {
   const i = vm.selected,
     sim = object(i.simulation),
     r = object(vm.result.result),
+    reflection = r.metric_unit === 'purchase_support' || vm.itemRecords.some(isSwipeQuestion),
+    counts = r.reflection_counts == null ? reflectionCounts(vm.itemRecords) : object(r.reflection_counts),
     complete = sim.status === 'COMPLETED',
     final = ['BUY', 'GIVE_UP'].includes(str(i.decision)),
     s = useHtmlStyles();
@@ -272,10 +157,17 @@ export function Result({ vm }: { vm: VM }) {
             </Text>
           </Row>
         </Row>
-        <Stat
+        {!reflection && <Stat
           label={h.resultCost}
           value={r.expected_cost_per_used_day == null ? c.insufficient : money(r.expected_cost_per_used_day)}
-        />
+        />}
+        {reflection && <Stack gap={2}>
+          <Text variant="heading">{h.reflectionTitle}</Text>
+          <Stat label={h.reflectionPositive} value={h.reflectionCount(num(counts.YES))} />
+          <Stat label={h.reflectionUnsure} value={h.reflectionCount(num(counts.UNSURE))} />
+          <Stat label={h.reflectionNegative} value={h.reflectionCount(num(counts.NO))} />
+          <Text variant="caption" tone="secondary">{h.reflectionNote}</Text>
+        </Stack>}
       </Panel>
       {!!(object(vm.result.ai_summary).summary ?? r.response_summary) && (
         <Panel>
@@ -351,62 +243,21 @@ export function Result({ vm }: { vm: VM }) {
 }
 
 export function Review({ vm }: { vm: VM }) {
-  const p = vm.review,
-    s = useHtmlStyles(),
-    [frequency, setFrequency] = useState(str(object(p.review).frequency));
+  const p = vm.review;
   return (
     <HtmlScreen vm={vm} title={h.reviewTitle}>
       <Product item={p} compact />
-      <Stack gap={2} paddingY={2}>
-        <Text variant="title">{h.reviewQuestion(str(p.item_name))}</Text>
-        <Text variant="htmlBody" tone="secondary">
-          {h.reviewBody}
-        </Text>
-        <Text variant="caption" tone="tertiary">
-          {str(p.review_start)} ~ {str(p.review_end)}
-        </Text>
-      </Stack>
-      <View style={s.twoColumns}>
-        {htmlReviewOptions.map((o) => (
-          <View key={o.code} style={s.half}>
-            <BucketOption
-              label={o.label}
-              range={o.range}
-              selected={frequency === o.code}
-              onPress={() => setFrequency(o.code)}
-            />
-          </View>
-        ))}
-      </View>
-      <Action vm={vm} label={c.save} disabled={!frequency} run={() => vm.actions.review(frequency)} />
-      {p.review != null && (
-        <>
-          <Panel>
-            <Text variant="heading">{h.comparison}</Text>
-            <BarRow
-              label={c.reviewExpected}
-              value={
-                p.expected_days_in_review_window == null
-                  ? c.insufficient
-                  : h.days(num(p.expected_days_in_review_window))
-              }
-              ratio={num(p.expected_days_in_review_window) / 14}
-              tone="predicted"
-            />
-            <BarRow
-              label={c.reviewActual}
-              value={p.actual_days_estimate == null ? c.insufficient : h.days(num(p.actual_days_estimate))}
-              ratio={num(p.actual_days_estimate) / 14}
-            />
-            <Stat label={c.difference} value={p.difference_percentage_points ?? c.insufficient} />
-            <Text variant="bodyStrong">{str(p.verdict)}</Text>
-          </Panel>
-          <Action vm={vm} label={copy.tabs.report} secondary run={() => vm.go('report')} />
-        </>
-      )}
-      <Text variant="caption" tone="tertiary">
-        {c.reviewNote}
-      </Text>
+      <Text variant="caption" tone="secondary">{h.legacyAnswer}</Text>
+      {p.review != null && <Panel>
+        <Text variant="heading">{h.comparison}</Text>
+        <BarRow label={c.reviewExpected}
+          value={p.expected_days_in_review_window == null ? c.insufficient : h.days(num(p.expected_days_in_review_window))}
+          ratio={num(p.expected_days_in_review_window) / 14} tone="predicted" />
+        <BarRow label={c.reviewActual}
+          value={p.actual_days_estimate == null ? c.insufficient : h.days(num(p.actual_days_estimate))}
+          ratio={num(p.actual_days_estimate) / 14} />
+        <Text variant="bodyStrong">{str(p.verdict)}</Text>
+      </Panel>}
     </HtmlScreen>
   );
 }

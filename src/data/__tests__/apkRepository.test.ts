@@ -3,6 +3,14 @@ import { ApiError } from '@/api';
 import { ApkRepository } from '@/data/apkRepository';
 import { draftPayload, newDraft, object, seoulDate, validAnswer, type Json, type Task } from '@/lib/apkDomain';
 
+const swipeSpec = {
+  type: 'CHOICE', interaction: 'SWIPE', polarity: 'PURCHASE_SUPPORT',
+  options: [{ code: 'YES', label: '예' }, { code: 'UNSURE', label: '잘 모르겠어요' }, { code: 'NO', label: '아니요' }],
+};
+const task: Task = { kind: 'simulations', subjectId: 's1', name: '요가매트', date: seoulDate() };
+const swipeQuestion = () => ({ id: 'q', question_date: task.date, template_version: 'swipe-v2',
+  template_code: 'SW_PRE_CUSTOM', question: '요가매트을(를) 펼칠 공간을 준비할 수 있나요?', answer_spec: swipeSpec });
+
 beforeEach(async () => {
   await AsyncStorage.clear();
 });
@@ -98,8 +106,9 @@ it('LOCAL question answers stay on device and are only uploaded for completed su
       id: 'q1',
       question_date: task.date,
       question: 'Q',
-      template_code: 'DAYS',
-      answer_spec: { type: 'INTEGER', minimum: 0, maximum: 30 },
+      template_code: 'SW_PRE_NEED',
+      template_version: 'swipe-v2',
+      answer_spec: swipeSpec,
     })
     .mockResolvedValueOnce({
       result: { answered_days: 1 },
@@ -108,11 +117,11 @@ it('LOCAL question answers stay on device and are only uploaded for completed su
   const repo = new ApkRepository(call, async () => 'account', AsyncStorage);
   await repo.init();
   await repo.question(task);
-  await repo.answer(task, { number_value: 12 });
+  await repo.answer(task, { choice_code: 'YES' });
   expect(call).toHaveBeenCalledTimes(1);
   const restarted = new ApkRepository(call, async () => 'account', AsyncStorage);
   await restarted.init();
-  expect((await restarted.question(task)).answer).toEqual({ number_value: 12 });
+  expect((await restarted.question(task)).answer).toEqual({ choice_code: 'YES' });
   const item = {
     simulation: {
       id: 's1',
@@ -129,9 +138,9 @@ it('LOCAL question answers stay on device and are only uploaded for completed su
       responses: [
         {
           date: task.date,
-          template_code: 'DAYS',
+          template_code: 'SW_PRE_NEED',
           question: 'Q',
-          answer: { number_value: 12 },
+          answer: { choice_code: 'YES' },
         },
       ],
     },
@@ -177,4 +186,55 @@ it('validates all four APK answer forms and rejects ambiguous answers', () => {
     ),
   ).toBe(true);
   expect(validAnswer({ type: 'TEXT' }, { text_value: 'a', number_value: 1 })).toBe(false);
+});
+
+it('concurrent opens share one random question and retain it on restart', async () => {
+  const call = jest.fn().mockResolvedValue(swipeQuestion());
+  const repo = new ApkRepository(call, async () => 'account', AsyncStorage);
+  const [first, second] = await Promise.all([repo.question(task), repo.question(task)]);
+  expect(first).toEqual(second);
+  expect(call).toHaveBeenCalledTimes(1);
+  const restarted = new ApkRepository(call, async () => 'account', AsyncStorage);
+  expect(await restarted.question(task)).toEqual(first);
+  expect(call).toHaveBeenCalledTimes(1);
+});
+
+it('replaces an unanswered old question without reinterpreting old answered records', async () => {
+  const call = jest.fn().mockResolvedValue(swipeQuestion());
+  const repo = new ApkRepository(call, async () => 'account', AsyncStorage);
+  await repo.init();
+  const key = `simulations:s1:${task.date}`;
+  repo.local.records[key] = { id: 'old', question_date: task.date, template_code: 'EXPECTED_USE_DAYS',
+    question: '며칠?', answer_spec: { type: 'INTEGER', minimum: 0, maximum: 30 } };
+  await repo.persist();
+  expect((await repo.question(task)).template_version).toBe('swipe-v2');
+  repo.local.records[key] = { id: 'answered-old', question_date: task.date,
+    answer_spec: { type: 'INTEGER', minimum: 0, maximum: 30 }, answer: { number_value: 12 } };
+  await repo.persist();
+  expect((await repo.question(task)).answer).toEqual({ number_value: 12 });
+  await expect(repo.answer(task, { choice_code: 'YES' })).rejects.toThrow();
+  expect(call).toHaveBeenCalledTimes(1);
+});
+
+it('does not cache an unsupported response or a stale-date question', async () => {
+  const call = jest.fn().mockResolvedValueOnce({ ...swipeQuestion(), answer_spec: { type: 'TEXT' } })
+    .mockResolvedValueOnce({ ...swipeQuestion(), question_date: '2000-01-01' })
+    .mockResolvedValueOnce(swipeQuestion());
+  const repo = new ApkRepository(call, async () => 'account', AsyncStorage);
+  await expect(repo.question(task)).rejects.toThrow();
+  expect(repo.local.records).toEqual({});
+  await expect(repo.question(task)).rejects.toThrow();
+  expect(repo.local.records).toEqual({});
+  expect((await repo.question(task)).template_version).toBe('swipe-v2');
+});
+
+it('reports a failed device save and rolls back the in-memory answer', async () => {
+  const storage = { ...AsyncStorage, setItem: jest.fn(AsyncStorage.setItem) };
+  const repo = new ApkRepository(jest.fn().mockResolvedValue(swipeQuestion()), async () => 'account', storage);
+  await repo.question(task);
+  storage.setItem.mockRejectedValueOnce(new Error('full'));
+  await expect(repo.answer(task, { choice_code: 'YES' })).rejects.toThrow('full');
+  expect((await repo.question(task)).answer).toBeUndefined();
+  await repo.answer(task, { choice_code: 'NO' });
+  expect((await repo.question(task)).answer).toEqual({ choice_code: 'NO' });
 });

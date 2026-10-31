@@ -4,6 +4,7 @@ import { apkCopy as c } from '@/constants/apkCopy';
 import { createId } from '@/lib/id';
 import {
   draftPayload,
+  isSwipeQuestion,
   newDraft,
   object,
   rows,
@@ -39,6 +40,7 @@ export class ApkRepository {
   local = emptyLocal('');
   private initPending?: Promise<void>;
   private writing: Promise<void> = Promise.resolve();
+  private pendingQuestions = new Map<string, Promise<Json>>();
   constructor(
     private transport: Transport = authenticatedRequest,
     private session = ensureGuestSession,
@@ -150,7 +152,16 @@ export class ApkRepository {
   async question(t: Task) {
     await this.init();
     const existing = this.local.records[taskKey(t)];
-    if (existing) return existing;
+    // Preserve answered historical cards; only unanswered old formats are replaced.
+    if (existing && (existing.answer != null || isSwipeQuestion(existing))) return existing;
+    const key = taskKey(t);
+    const pending = this.pendingQuestions.get(key);
+    if (pending) return pending;
+    const request = this.generateQuestion(t);
+    this.pendingQuestions.set(key, request);
+    try { return await request; } finally { this.pendingQuestions.delete(key); }
+  }
+  private async generateQuestion(t: Task) {
     const history = this.records(t.kind, t.subjectId)
       .filter((q) => str(q.question_date) < t.date)
       .slice(-365);
@@ -161,20 +172,29 @@ export class ApkRepository {
       })),
     });
     if (q.question_date !== t.date) throw new Error(c.staleQuestion);
-    this.local.records[taskKey(t)] = {
+    if (!isSwipeQuestion(q)) throw new Error(c.questionUnavailable);
+    await this.saveRecord(taskKey(t), {
       ...q,
       local_kind: t.kind,
       local_subject: t.subjectId,
-    };
-    await this.persist();
+    });
     return this.local.records[taskKey(t)];
+  }
+  private async saveRecord(key: string, record: Json) {
+    const previous = this.local.records[key];
+    this.local.records[key] = record;
+    try { await this.persist(); } catch (error) {
+      if (previous) this.local.records[key] = previous;
+      else delete this.local.records[key];
+      throw error;
+    }
   }
   async answer(t: Task, answer: Json) {
     if (t.date !== seoulDate()) throw new Error(c.staleQuestion);
     const q = this.local.records[taskKey(t)];
-    if (!q || !validAnswer(object(q.answer_spec), answer)) throw new Error(c.invalidAnswer);
-    this.local.records[taskKey(t)] = { ...q, answer };
-    await this.persist();
+    if (!q || !isSwipeQuestion(q) || !validAnswer(object(q.answer_spec), answer))
+      throw new Error(c.invalidAnswer);
+    await this.saveRecord(taskKey(t), { ...q, answer });
   }
   async summary(item: Json) {
     const sim = object(item.simulation),

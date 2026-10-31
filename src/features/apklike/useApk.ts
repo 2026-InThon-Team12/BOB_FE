@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppState, BackHandler } from 'react-native';
 import { apkActions as actions, apkRepository, useApkState } from '@/data';
-import { apkBackPage, object, type Json } from '@/lib/apkDomain';
+import { apkBackPage, object, seoulDate, str, type Json } from '@/lib/apkDomain';
 import { pickImage, prepareCartImage, type PickedImage } from '@/lib/image';
 import { apkTabs, apkTitles } from '@/constants/apkCopy';
 
@@ -75,6 +75,11 @@ export function useApk() {
     cancelPhoto: () => setPendingPhoto(null),
     openItem: (id: string) => finish(actions.openItem(id), 'result'),
     openReview: (review: Json) => {
+      if (review.question_mode === 'LOCAL') {
+        return finish(actions.openQuestion({
+          kind: 'purchases', subjectId: str(review.id), name: str(review.item_name), date: seoulDate(),
+        }), 'question');
+      }
       actions.openReview(review);
       go('review');
     },
