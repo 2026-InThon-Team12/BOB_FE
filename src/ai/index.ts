@@ -25,7 +25,7 @@ export function withFallback(primary: AiService, fallback: AiService): AiService
     classifyCategory: (input) =>
       attempt('classifyCategory', () => primary.classifyCategory(input), () => fallback.classifyCategory(input)),
     parseCartScreenshot: (image) => primary.parseCartScreenshot(image),
-    parseLink: (url) => attempt('parseLink', () => primary.parseLink(url), () => fallback.parseLink(url)),
+    parseLink: (url) => primary.parseLink(url),
     parseDiscountRules: (image) =>
       attempt(
         'parseDiscountRules',

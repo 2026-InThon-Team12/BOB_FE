@@ -110,7 +110,11 @@ export async function summarizeItem(itemId: string): Promise<void> {
 export async function decideItemRemote(itemId: string, action: 'buy'|'abandon'|'hold'): Promise<Item> {
   return single(`decision:${itemId}`, async () => {
     let item = getState().items[itemId];
-    if (getToday() >= simulationEndDay(item)) await summarizeItem(itemId);
+    if (getToday() >= simulationEndDay(item)) {
+      // An optional AI summary must not prevent an explicit purchase/abandonment.
+      // Keep the local transcript intact; never fabricate a successful summary.
+      try { await summarizeItem(itemId); } catch { /* The result screen retains the summary error. */ }
+    }
     item = getState().items[itemId];
     let response: unknown;
     if (item.remoteId && env.aiMode === 'real') response = await bobApi.items.putDecision(item.remoteId,{decision: action === 'buy' ? 'BUY' : action === 'hold' ? 'HOLD' : 'GIVE_UP'},`decision-${requestDigest(`${item.remoteId}:${action}:${simulationEndDay(item)}`)}`);

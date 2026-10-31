@@ -32,6 +32,8 @@ export const copy = {
     finish: 'BOB 시작하기',
   },
   goal: {
+    nextGoal: '다음 목표 등록하기',
+    impulseTitle: '지금 이걸 산다면?',
     title: '목표',
     change: '목표 바꾸기',
     emptyTitle: '목표를 먼저 정해 볼까요?',
@@ -44,6 +46,8 @@ export const copy = {
     dailySaving: (amount: number) => `하루 평균 ${formatWon(Math.round(amount))}씩 모으고 있어요`,
   },
   report: {
+    outsideSpending: (count: number, amount: number) => `앱 밖 충동 소비 가능 지출 · ${count}건 · ${formatWon(amount)}`,
+    outsideSpendingHint: '직접 기록한 지출 이름 기준으로 분류한 금액이에요.',
     title: '리포트',
     emptyTitle: '아직 리포트를 만들 기록이 부족해요',
     emptyDescription: '시뮬레이션과 구매 후 점검이 쌓이면 나의 소비 패턴을 보여드릴게요.',
@@ -166,6 +170,12 @@ export const copy = {
     linkLabel: '상품 링크',
     linkPlaceholder: 'https://',
     linkInvalid: '링크 주소를 확인해 주세요',
+    linkError: (error: unknown) => {
+      const value = error as { code?: string; body?: { error?: { code?: string } } } | null;
+      if (value?.body?.error?.code === 'PRODUCT_URL_BLOCKED') return '쇼핑몰이 서버의 상품 정보 요청을 차단했어요. 링크는 보관할 수 있어요. 상품명·가격을 직접 입력하거나 장바구니 사진으로 등록해 주세요.';
+      if (value?.code === 'timeout' || value?.code === 'network') return '연결이 원활하지 않아요. 입력한 링크는 유지했어요. 잠시 후 다시 불러와 주세요.';
+      return '상품 정보를 불러오지 못했어요. 상품 링크를 확인해 다시 시도하거나, 링크를 유지한 채 직접 입력해 주세요.';
+    },
     linkFetch: '불러오기',
     linkFailed: '상품 정보를 불러오지 못했어요. 직접 입력으로 넘어갈게요.',
     // 확인
@@ -366,12 +376,12 @@ export const copy = {
     customNamePlaceholder: '예: 마라탕',
     customAmount: '금액',
     headline: (item: string, goal: string) => `이 ${josa(item, '을/를')} 사면\n${josa(goal, '이/가')} `,
-    late: (days: number) => `${days}일`,
+    late: (days: number) => `${Math.ceil(Math.max(0, days))}일`,
     lateSuffix: ' 늦게 와요',
     ifResist: '참으면',
     ifBuy: '사면',
     formula: (amount: number, daily: number, days: number) =>
-      `남은 예산과 월별 계획을 반영한 예상 날짜예요. 구매 시 약 ${days}일 달라져요.`,
+      `남은 예산과 월별 계획을 반영한 예상 날짜예요. 구매 시 약 ${Math.ceil(Math.max(0, days))}일 달라져요.`,
     noSaving: '목표와 이번 달 예산을 입력하면 구매 전후의 예상 달성일을 비교할 수 있어요.',
     resist: (amount: number) => '이번엔 참을게요',
     giveIn: '구매했어요 · 지출 기록',
@@ -473,6 +483,10 @@ ${josa(name, '을/를')} 며칠 사용했나요?`,
     } as Record<string, { label: string; range: string }>,
   },
   decision: {
+    confirmTitle: (decision: 'Buy' | 'Bye') => `정말 ${decision} 하실 건가요?`,
+    confirmBody: '한번 선택하면 복구가 불가능합니다.',
+    confirmYes: '예',
+    confirmNo: '아니요',
     buy: 'Buy',
     buySub: '살게요',
     bye: 'Bye',

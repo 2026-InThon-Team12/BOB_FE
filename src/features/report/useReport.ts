@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { policy } from '@/config/policy';
 import { CATEGORY_LABELS } from '@/constants/categories';
 import { REASON_SHORT_LABELS } from '@/constants/reasons';
-import { useAnswers, useImpulses, useItems, useQuestions, useThisMonth } from '@/data';
+import { useAnswers, useExpenses, useImpulses, useItems, useQuestions, useThisMonth } from '@/data';
+import { monthlyOutsideSpending } from '@/lib/calc/outsideSpending';
 import { categoryTendency, monthlySummary, reasonStats, tendencyBadge, VERDICT_RATIO } from '@/lib/calc';
 import { addMonths } from '@/lib/date';
 
@@ -17,6 +18,7 @@ export function useReport() {
   const questions = useQuestions();
   const answers = useAnswers();
   const impulses = useImpulses();
+  const expenses = useExpenses();
 
   const data = useMemo(() => {
     // 예측 vs 실제 · 이유별 포기율은 표본이 적어서 지금까지 기록 전체로 본다
@@ -48,13 +50,14 @@ export function useReport() {
 
     return {
       summary: monthlySummary({ items, impulses, month }),
+      outsideSpending: monthlyOutsideSpending(expenses, month),
       finding,
       compare,
       reasons,
       topReason,
-      empty: items.length === 0,
+      empty: items.length === 0 && impulses.length === 0 && expenses.length === 0,
     };
-  }, [items, questions, answers, impulses, month]);
+  }, [items, questions, answers, impulses, expenses, month]);
 
   return {
     month,

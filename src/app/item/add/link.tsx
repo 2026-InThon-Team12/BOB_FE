@@ -11,8 +11,7 @@ export default function LinkScreen() {
 
   const fetchLink = async () => {
     const result = await link.fetchLink();
-    // 실패해도 링크만 남긴 빈 초안으로 직접 입력을 이어간다
-    if (result !== 'canceled') router.replace('/item/add/review');
+    if (result === 'done') router.replace('/item/add/review');
   };
 
   return (
@@ -37,6 +36,10 @@ export default function LinkScreen() {
         inputMode="url"
         error={link.invalid ? copy.register.linkInvalid : undefined}
       />
+      {link.failed && <Stack gap={3}>
+        <Text tone="warning">{link.errorMessage}</Text>
+        <Button label={copy.register.toManual} variant="secondary" onPress={() => {link.startManual(); router.replace('/item/add/review');}} />
+      </Stack>}
     </Screen>
   );
 }

@@ -16,6 +16,37 @@ jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
 const input={name:'키보드',price:20000,category:'digital' as const,reasons:['need' as const],source:'manual' as const};
 const progress=(id:string)=>{const s=getState();return goalProgress({goal:s.goals[id],impulses:Object.values(s.impulses),items:Object.values(s.items),policy,budgets:s.budgets,expenses:Object.values(s.expenses),today:getToday()});};
 beforeEach(()=>{resetAllData();jest.resetAllMocks();});
+it('a next goal preserves the achieved shelf entry and does not reuse its savings', () => {
+  const now = jest.spyOn(Date,'now').mockReturnValue(new Date('2026-11-01T03:00:00Z').getTime());
+  try {
+    setMonthlyBudget({month:'2026-11',income:300000,food:0,living:0,transport:0,saving:0});
+    const first = createGoal({name:'첫 목표',price:10000,imageUri:'https://example.com/goal.jpg'});
+    shiftClock(1);
+    const next = createGoal({name:'다음 목표',price:20000,carriedAmount:10000});
+    expect(getState().goals[first.id]).toMatchObject({isActive:false,imageUri:'https://example.com/goal.jpg'});
+    expect(getState().goals[first.id].achievedAt).toBeTruthy();
+    expect(progress(first.id).saved).toBe(10000);
+    expect(progress(next.id).saved).toBe(0);
+    expect(Object.values(getState().goals).filter(g=>g.isActive)).toHaveLength(1);
+  } finally {now.mockRestore();}
+});
+it.each([0, 1, 2, 8])('Bye at day %i keeps questions, makes no expense, and survives summary failure', async day => {
+  const [item] = addItems([input]);
+  applyRemoteItem(item.id, {id:'server', decision:null, purchase:null, simulation:{id:'simulation', duration_days:7, start_date:getToday(), end_date_exclusive:addDays(getToday(),7)}});
+  (bobApi.simulations.localQuestion as jest.Mock).mockRejectedValue(new Error('offline'));
+  await loadTodayReflections();
+  const questions = {...getState().questions};
+  shiftClock(day);
+  (bobApi.simulations.summarize as jest.Mock).mockRejectedValue(new Error('unavailable'));
+  (bobApi.items.putDecision as jest.Mock).mockResolvedValue(undefined);
+  await Promise.all([decideItemRemote(item.id,'abandon'), decideItemRemote(item.id,'abandon')]);
+  expect(bobApi.items.putDecision).toHaveBeenCalledTimes(1);
+  expect(bobApi.items.putDecision).toHaveBeenCalledWith('server', {decision:'GIVE_UP'}, expect.any(String));
+  expect(getState().items[item.id].status).toBe('abandoned');
+  expect(getState().items[item.id].purchase).toBeUndefined();
+  expect(Object.values(getState().expenses)).toHaveLength(0);
+  expect(getState().questions).toEqual(questions);
+});
 it('calendar savings transfer retains the remainder and resisting never credits either goal',()=>{
   const now=jest.spyOn(Date,'now').mockReturnValue(new Date('2026-11-01T03:00:00Z').getTime());
   try {

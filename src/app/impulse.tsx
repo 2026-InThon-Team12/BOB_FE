@@ -21,6 +21,7 @@ export default function ImpulseScreen() {
       <Stack flex={1}><Card><Text variant="caption">{copy.impulse.ifResist}</Text><Text variant="heading">{formatMonthDay(imp.etaIfResist)}</Text></Card></Stack>
       <Stack flex={1}><Card tone="brandSubtle"><Text variant="caption">{copy.impulse.ifBuy}</Text><Text variant="heading">{formatMonthDay(imp.etaIfBuy)}</Text></Card></Stack>
     </Row> : <Card><Text tone="secondary">{copy.impulse.noSaving}</Text><Button label={copy.tabs.wallet} variant="ghost" onPress={() => router.push('/wallet')}/></Card>}
+    {imp.delay !== null && <Text variant="bodyStrong">{copy.impulse.late(imp.delay)}{copy.impulse.lateSuffix}</Text>}
     <Text variant="caption" tone="secondary">{updateCopy.estimated}</Text>
     {imp.recorded && <Text tone="brand">{updateCopy.recorded}</Text>}
     <Button label={copy.impulse.resist(imp.amount)} disabled={!imp.ready} size="lg" fullWidth onPress={() => {const out=imp.resist();if(out?.kind === 'resisted') toast(copy.impulse.resisted(out.amount));}}/>

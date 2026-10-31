@@ -261,6 +261,8 @@ export const layout = {
   /** 이 폭보다 넓으면 PhoneFrame을 보여준다 */
   frameBreakpoint: 600,
   hitSlop: 8,
+  /** 원본 하단 메뉴: 72×50 버튼, 11px 글자, 24px 아이콘 */
+  tabBar: { labelSize: 11, labelLineHeight: 16, itemWidth: 72, itemHeight: 50, topPadding: 6, bottomPadding: 28 },
   iconSize: { sm: 16, md: 20, lg: 24, xl: 32 },
   /** 물품 썸네일 */
   thumbnail: { sm: 48, md: 56 },

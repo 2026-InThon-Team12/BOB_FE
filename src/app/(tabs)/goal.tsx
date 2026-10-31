@@ -89,10 +89,11 @@ export default function GoalScreen() {
         </Row>
       </Card>
 
+      {progress.achieved && <Button label={copy.goal.nextGoal} fullWidth onPress={() => router.push({pathname:'/goals/new',params:{mode:'first'}})} />}
       <Text variant="caption" tone="secondary">{updateCopy.estimated}</Text>
       {overview.usesPreviousBudget && <Text variant="caption" tone="secondary">{updateCopy.recurring}</Text>}
       {progress.achieved && <Button label={copy.impulse.achievedCta} fullWidth onPress={() => router.push({ pathname: '/goals/done', params: { id: goal.id } })}/>}
-      <Button label={updateCopy.impulseCta} icon="clock" fullWidth onPress={() => router.push('/impulse')}/>
+      <Button label={copy.goal.impulseTitle} icon="clock" fullWidth onPress={() => router.push('/impulse')}/>
     </Screen>
   );
 }

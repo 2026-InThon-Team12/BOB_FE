@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useRef, useState } from 'react';
 
 import { ItemSummary } from '@/components/feature';
-import { Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, useToast } from '@/components/ui';
+import { BottomSheet, Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, useToast } from '@/components/ui';
 import { copy, reflectionCopy } from '@/constants/copy';
 import { REASON_TOPICS } from '@/constants/reasons';
 import { policy } from '@/config/policy';
@@ -13,10 +14,17 @@ export default function ResultScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { view, decide, busy, error, summaryLoading, refresh } = useSimulationResult(id);
   const toast = useToast();
+  const [confirmation, setConfirmation] = useState<'buy' | 'abandon' | null>(null);
+  const deciding = useRef(false);
 
-  /** 명세서 3장: Buy ▶ 홈 (2주 뒤 점검 예약) · Bye ▶ 목표 (참은 금액 누적) · 보류 ▶ 홈 */
+  /** 확정 버튼을 누르기 전에는 서버·기기 기록을 변경하지 않는다. */
   const onDecide = async (action: 'buy' | 'abandon' | 'hold') => {
-    const out = await decide(action);
+    if (deciding.current) return;
+    deciding.current = true;
+    setConfirmation(null);
+    let out;
+    try { out = await decide(action); }
+    finally { deciding.current = false; }
     if (!out) return;
     if (out.action === 'buy') {
       toast(copy.result.boughtToast(out.reviewAfterDays));
@@ -85,14 +93,14 @@ export default function ResultScreen() {
           )}
           <Row gap={3}>
             <Stack flex={1}>
-              <Button label={copy.decision.buy} sublabel={copy.decision.buySub} disabled={busy || summaryLoading} onPress={() => onDecide('buy')} />
+              <Button label={copy.decision.buy} sublabel={copy.decision.buySub} disabled={busy || summaryLoading} onPress={() => setConfirmation('buy')} />
             </Stack>
             <Stack flex={1}>
               <Button
                 label={copy.decision.bye}
                 sublabel={copy.decision.byeSub}
                 variant="bye"
-                disabled={busy || summaryLoading || view.phase !== 'awaitingDecision'} onPress={() => onDecide('abandon')}
+                disabled={busy || summaryLoading} onPress={() => setConfirmation('abandon')}
               />
             </Stack>
           </Row>
@@ -101,6 +109,14 @@ export default function ResultScreen() {
           )}
         </Stack>
       ) : null}
+      <BottomSheet visible={confirmation !== null} onClose={() => setConfirmation(null)} closeLabel={copy.decision.confirmNo}>
+        <Text variant="heading">{copy.decision.confirmTitle(confirmation === 'buy' ? 'Buy' : 'Bye')}</Text>
+        <Text>{copy.decision.confirmBody}</Text>
+        <Row gap={3}>
+          <Stack flex={1}><Button label={copy.decision.confirmNo} variant="secondary" onPress={() => setConfirmation(null)} /></Stack>
+          <Stack flex={1}><Button label={copy.decision.confirmYes} disabled={busy} onPress={() => confirmation && onDecide(confirmation)} /></Stack>
+        </Row>
+      </BottomSheet>
     </Screen>
   );
 }

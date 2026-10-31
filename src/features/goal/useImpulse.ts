@@ -30,7 +30,7 @@ export function useImpulse(initial: number | 'custom' = 1) {
 
   const saving = overview.goal ? overview.dailySaving : null;
   const plan = overview.goal?.funding && ready ? fundingPlan(overview.goal, budgets, expenses, today, amount) : null;
-  const delay = plan?.eta && overview.goal && overview.eta ? Math.max(0, diffDays(overview.eta, plan.eta)) : null;
+  const delay = plan?.eta && overview.goal && overview.eta ? Math.ceil(Math.max(0, diffDays(overview.eta, plan.eta))) : null;
   const eta = overview.goal ? overview.eta : null;
 
   return {

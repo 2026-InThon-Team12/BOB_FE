@@ -1,45 +1,115 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, PanResponder, ScrollView, View } from 'react-native';
-import { Button, Card, Row, Screen, Stack, Text, TextLink } from '@/components/ui';
-import { helpCopy, helpSteps } from '@/constants/help';
-import { makeStyles } from '@/theme';
-const useStyles=makeStyles(t=>({
-  stage:{flex:1,minHeight:t.space[12]*4,overflow:'hidden',borderRadius:t.radius.lg,backgroundColor:t.color.bg.canvas},
-  absolute:{position:'absolute'}, shade:{position:'absolute',backgroundColor:t.color.overlay},
-  spot:{position:'absolute',borderColor:t.color.brand.solid,borderWidth:2,borderRadius:t.radius.md},
-  content:{paddingBottom:t.space[2]},
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, Mask, Rect } from 'react-native-svg';
+
+import { Button, Row, Text, TextLink } from '@/components/ui';
+import { helpCanvas, helpCopy, helpSteps } from '@/constants/help';
+import { makeStyles, useTheme } from '@/theme';
+
+const useStyles = makeStyles((t) => ({
+  root: { flex: 1, backgroundColor: t.color.bg.canvas },
+  content: { flex: 1, padding: t.space[3], gap: t.space[2] },
+  top: { minHeight: t.space[8], justifyContent: 'center' },
+  stage: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 0 },
+  picture: { overflow: 'hidden', borderRadius: t.radius.lg, backgroundColor: t.color.bg.canvas },
+  absolute: { position: 'absolute', top: 0, left: 0 },
+  bubble: { position: 'absolute', backgroundColor: t.color.bg.surface, borderRadius: t.radius.lg, ...t.elevation.raised },
+  bubbleClip: { overflow: 'hidden', borderRadius: t.radius.lg },
+  bubbleContent: { padding: t.space[4], gap: t.space[2] },
+  arrow: { position: 'absolute', width: t.space[4], height: t.space[4], backgroundColor: t.color.bg.surface, transform: [{ rotate: '45deg' }] },
+  dots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: t.space[1], minHeight: t.space[4] },
+  dot: { width: t.space[1], height: t.space[1], borderRadius: t.radius.pill, backgroundColor: t.color.border.default },
+  activeDot: { width: t.space[3], backgroundColor: t.color.text.brand },
+  menu: { gap: t.space[2], paddingBottom: t.space[3] },
 }));
-export default function HelpScreen(){
- const {intro}=useLocalSearchParams<{intro?:string}>();
- const [index,setIndex]=useState(0),[menu,setMenu]=useState(false);
- const [size,setSize]=useState({width:0,height:0});
- const styles=useStyles(), step=helpSteps[index];
- const close=()=>{if(intro==='1')router.replace('/onboarding/goal');else if(router.canGoBack())router.back();else router.replace('/');};
- const next=()=>{if(index===helpSteps.length-1)close();else setIndex(index+1);};
- const gesture=useMemo(()=>PanResponder.create({onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>25&&Math.abs(g.dx)>Math.abs(g.dy)*1.5,onPanResponderRelease:(_,g)=>{if(g.dx < -50){if(index<helpSteps.length-1)setIndex(index+1);}else if(g.dx>50)setIndex(Math.max(0,index-1));}}),[index]);
- const scale=size.width/390;
- const spotHeight=Math.min(step.height*scale+12,Math.max(0,size.height-16));
- const offset=Math.max(0,Math.min(650*scale-size.height,step.y*scale-(size.height-spotHeight)/2));
- const y=Math.max(4,Math.min(size.height-spotHeight-4,step.y*scale-offset-6));
- const x=Math.max(4,step.x*scale-6),w=Math.min(size.width-x-4,step.width*scale+12);
- const topics=helpSteps.filter(s=>s.si===0);
- return <Screen scroll={false} edges={['top','bottom']}>
-  <Row justify="space-between"><TextLink label={helpCopy.contents} onPress={()=>setMenu(!menu)}/><Text variant="caption">{helpCopy.example}</Text><TextLink label={helpCopy.close} onPress={close}/></Row>
-  {menu ? <ScrollView contentContainerStyle={styles.content}>{topics.map(s=><Button key={s.ti} variant="secondary" label={`${s.ti+1}. ${s.topic}`} onPress={()=>{setIndex(helpSteps.indexOf(s));setMenu(false);}}/>)}</ScrollView> : <>
-  <View style={styles.stage} {...gesture.panHandlers} onLayout={e=>setSize({width:e.nativeEvent.layout.width,height:e.nativeEvent.layout.height})}>
-    <Image source={step.image} accessibilityElementsHidden importantForAccessibility="no" style={[styles.absolute,{width:size.width,height:650*scale,top:-offset}]} resizeMode="stretch"/>
-    <View pointerEvents="none" style={[styles.shade,{top:0,left:0,right:0,height:y}]}/>
-    <View pointerEvents="none" style={[styles.shade,{top:y+spotHeight,left:0,right:0,bottom:0}]}/>
-    <View pointerEvents="none" style={[styles.shade,{top:y,left:0,width:x,height:spotHeight}]}/>
-    <View pointerEvents="none" style={[styles.shade,{top:y,left:x+w,right:0,height:spotHeight}]}/>
-    <View pointerEvents="none" style={[styles.spot,{top:y,left:x,width:w,height:spotHeight}]}/>
-  </View>
-  <Card><Stack gap={2}>
-    <Text variant="caption" tone="brand">{step.ti+1}. {step.topic} · {index+1}/{helpSteps.length}</Text>
-    <Text variant="heading">{step.title}</Text>
-    <Text variant="label">{step.body}</Text>
-    <Row justify="space-between"><Button label={helpCopy.previous} disabled={index===0} variant="ghost" onPress={()=>setIndex(index-1)}/><Button label={index===helpSteps.length-1 ? intro==='1' ? helpCopy.start : helpCopy.done : helpCopy.next} onPress={next}/></Row>
-  </Stack></Card></>}
- </Screen>;
+
+export default function HelpScreen() {
+  const { intro } = useLocalSearchParams<{ intro?: string }>();
+  const [index, setIndex] = useState(0);
+  const [menu, setMenu] = useState(false);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [bubbleHeight, setBubbleHeight] = useState(0);
+  const theme = useTheme();
+  const styles = useStyles();
+  const step = helpSteps[index];
+  const close = () => {
+    if (intro === '1') router.replace('/onboarding/goal');
+    else if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
+  const next = () => index === helpSteps.length - 1 ? close() : setIndex(index + 1);
+  const gesture = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 25 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderRelease: (_, g) => {
+      if (g.dx < -50) setIndex(Math.min(helpSteps.length - 1, index + 1));
+      else if (g.dx > 50) setIndex(Math.max(0, index - 1));
+    },
+  }), [index]);
+
+  // Image and rounded mask share a contain transform: no stretching or cropping.
+  const scale = Math.max(0, Math.min(size.width / helpCanvas.width, size.height / helpCanvas.height));
+  const width = helpCanvas.width * scale;
+  const height = helpCanvas.height * scale;
+  const inset = theme.space[3];
+  const gap = theme.space[4];
+  const sx = Math.max(4, step.x - 4);
+  const sy = Math.max(4, step.y - 4);
+  const sw = Math.min(helpCanvas.width - sx - 4, step.width + 8);
+  const sh = Math.min(helpCanvas.height - sy - 4, step.height + 8);
+  const belowSpace = Math.max(0, height - (sy + sh) * scale - gap - inset);
+  const aboveSpace = Math.max(0, sy * scale - gap - inset);
+  const above = bubbleHeight > belowSpace && aboveSpace > belowSpace;
+  const maxBubbleHeight = above ? aboveSpace : belowSpace;
+  const shownHeight = Math.min(bubbleHeight, maxBubbleHeight);
+  const top = above ? sy * scale - gap - shownHeight : (sy + sh) * scale + gap;
+  const arrowLeft = Math.max(inset, Math.min(width - inset * 3 - theme.space[4], (sx + sw / 2) * scale - inset - theme.space[2]));
+
+  return <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <View style={styles.content}>
+      <View style={styles.top}><Row justify="space-between">
+        <TextLink label={helpCopy.contents} onPress={() => setMenu(!menu)} />
+        <Text variant="caption">{helpCopy.example}</Text>
+        <TextLink label={helpCopy.close} onPress={close} />
+      </Row></View>
+      {menu ? <ScrollView contentContainerStyle={styles.menu}>
+        {helpSteps.map((s, i) => <Button key={s.topic} variant="secondary" label={`${i + 1}. ${s.topic}`} onPress={() => { setIndex(i); setMenu(false); }} />)}
+      </ScrollView> : <>
+        <View style={styles.stage} {...gesture.panHandlers} onLayout={(e) => setSize(e.nativeEvent.layout)}>
+          {scale > 0 && <View style={[styles.picture, { width, height }]}>
+            <Image key={index} source={step.image} accessibilityElementsHidden importantForAccessibility="no" style={[styles.absolute, { width, height }]} resizeMode="contain" fadeDuration={0} />
+            <Svg pointerEvents="none" style={styles.absolute} width={width} height={height} viewBox={`0 0 ${helpCanvas.width} ${helpCanvas.height}`}>
+              <Defs><Mask id="helpSpot" x="0" y="0" width={helpCanvas.width} height={helpCanvas.height} maskUnits="userSpaceOnUse">
+                <Rect width={helpCanvas.width} height={helpCanvas.height} fill="white" />
+                <Rect x={sx} y={sy} width={sw} height={sh} rx={theme.radius.md} fill="black" />
+              </Mask></Defs>
+              <Rect width={helpCanvas.width} height={helpCanvas.height} fill={theme.color.overlay} mask="url(#helpSpot)" />
+              <Rect x={sx} y={sy} width={sw} height={sh} rx={theme.radius.md} fill="none" stroke={theme.color.brand.solid} strokeWidth={2} />
+            </Svg>
+            <View style={[styles.bubble, { left: inset, right: inset, top }]}>
+              <View pointerEvents="none" style={[styles.arrow, { left: arrowLeft, ...(above ? { bottom: -theme.space[2] } : { top: -theme.space[2] }) }]} />
+              <View style={styles.bubbleClip}>
+                <ScrollView key={index} style={{ maxHeight: maxBubbleHeight }} bounces={false}>
+                  <View style={styles.bubbleContent} onLayout={(e) => setBubbleHeight(e.nativeEvent.layout.height)}>
+                    <Text variant="caption" tone="brand">{step.topic}</Text>
+                    <Text variant="heading">{step.title}</Text>
+                    <Text variant="label">{step.body}</Text>
+                    <Row justify="space-between">
+                      <Button label={helpCopy.previous} disabled={index === 0} variant="ghost" onPress={() => setIndex(index - 1)} />
+                      <Text variant="caption" tone="brand">{index + 1} / {helpSteps.length}</Text>
+                      <Button label={index === helpSteps.length - 1 ? intro === '1' ? helpCopy.start : helpCopy.done : helpCopy.next} onPress={next} />
+                    </Row>
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </View>}
+        </View>
+        <View style={styles.dots} accessible accessibilityLabel={`${index + 1} / ${helpSteps.length}`}>
+          {helpSteps.map((s, i) => <View key={s.topic} style={[styles.dot, i === index && styles.activeDot]} />)}
+        </View>
+      </>}
+    </View>
+  </SafeAreaView>;
 }

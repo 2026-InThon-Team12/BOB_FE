@@ -58,6 +58,10 @@ export default function ReportScreen() {
         <StatTile label={copy.report.byeCount} value={copy.report.count(r.summary.byeCount)} />
         <StatTile label={copy.report.saved} value={formatWonShort(r.summary.savedMoney).replace(' 원', '')} tone="brand" />
       </Row>
+      <Stack gap={1}>
+        <Text variant="label">{copy.report.outsideSpending(r.outsideSpending.count, r.outsideSpending.amount)}</Text>
+        <Text variant="caption" tone="secondary">{copy.report.outsideSpendingHint}</Text>
+      </Stack>
 
       {r.finding && (
         <Card tone="inverse">

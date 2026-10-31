@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ai } from '@/ai';
 import { copy } from '@/constants/copy';
+import { productUrlFromText } from '@/lib/productUrl';
 import { orderedBatch } from '@/lib/orderedBatch';
 import { pickCartImages, prepareCartImage, type PickedImage } from '@/lib/image';
 
@@ -65,30 +66,35 @@ export function useScreenshotImport() {
 }
 
 // 백엔드 ProductUrlInput 계약은 HTTPS URL만 허용한다.
-const isUrl = (text: string) => /^https:\/\/\S+\.\S+/i.test(text.trim());
+const isUrl = (text: string) => productUrlFromText(text) !== null;
 
 export function useLinkImport() {
   const flow = useAddFlow();
   const [url, setUrl] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const mutation = useMutation({ mutationFn: (u: string) => ai.parseLink(u) });
+  const running = useRef(false);
 
-  /** 성공하면 'done', 실패하면 링크만 남긴 빈 초안으로 'failed' (직접 입력으로 이어감) */
+  /** 실패하면 현재 입력과 기존 초안을 보존한다. 직접 입력은 사용자가 선택한다. */
   const fetchLink = async (): Promise<ImportResult> => {
     setSubmitted(true);
-    if (!isUrl(url)) return 'canceled';
+    const normalized = productUrlFromText(url);
+    if (!normalized || running.current) return 'canceled';
+    running.current = true;
     try {
-      flow.setRows([draftFromAi(await mutation.mutateAsync(url.trim()))]);
+      flow.setRows([draftFromAi(await mutation.mutateAsync(normalized))]);
       return 'done';
     } catch {
-      flow.setRows([{ ...emptyDraft('link'), sourceUrl: url.trim() }]);
       return 'failed';
-    }
+    } finally { running.current = false; }
   };
 
   return {
     url,
-    setUrl,
+    setUrl: (value: string) => { setUrl(value); mutation.reset(); },
+    failed: mutation.isError,
+    errorMessage: copy.register.linkError(mutation.error),
+    startManual: () => flow.setRows([{ ...emptyDraft('link'), sourceUrl: productUrlFromText(url) ?? undefined }]),
     invalid: submitted && !isUrl(url),
     loading: mutation.isPending,
     fetchLink,

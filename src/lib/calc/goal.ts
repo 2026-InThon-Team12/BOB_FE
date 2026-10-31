@@ -20,7 +20,7 @@ export function dailySaving(params: {
   return available > 0 ? available / days : null;
 }
 
-/** "이거 사면 목표가 N일 늦게 와요" = max(1, round(지출액 ÷ 일평균 저축액)) (명세서 5장). 저축액을 모르면 null */
+/** "이거 사면 목표가 N일 늦게 와요" = ceil(지출액 ÷ 일평균 저축액). 저축액을 모르면 null */
 export const delayDays = (amount: number, saving: number | null) =>
   saving && saving > 0 && amount > 0 ? Math.max(1, Math.ceil(amount / saving)) : null;
 

@@ -96,10 +96,12 @@ describe('목표 (기능 4)', () => {
     expect(dailySaving({ budget: undefined, override: null, policy })).toBeNull();
   });
 
-  it('지연 일수 = max(1, round(지출 ÷ 일평균 저축)) — 시안: 23,000 ÷ 5,800 ≈ 4일', () => {
+  it('지연 일수 = ceil(지출 ÷ 일평균 저축) — 정수 경계도 올림', () => {
     expect(delayDays(23_000, 5_800)).toBe(4);
     expect(delayDays(4_800, 5_800)).toBe(1);
     expect(delayDays(1_000, 5_800)).toBe(1);
+    expect(delayDays(5_800, 5_800)).toBe(1);
+    expect(delayDays(5_801, 5_800)).toBe(2);
     expect(delayDays(20_000, null)).toBeNull();
   });
 

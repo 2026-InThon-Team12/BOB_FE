@@ -37,6 +37,7 @@ describe('withFallback', () => {
     const ai = withFallback(failing, fallbackAi);
     await expect(ai.classifyCategory({ name: '캠핑 랜턴' })).resolves.toMatchObject({ category: 'hobby' });
     await expect(ai.parseCartScreenshot({ uri: 'x' })).rejects.toMatchObject({ code: 'network', message: 'x' });
+    await expect(ai.parseLink('https://shop.example/p')).rejects.toMatchObject({ code: 'http', status: 500 });
     warn.mockRestore();
   });
 
