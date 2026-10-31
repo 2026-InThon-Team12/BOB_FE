@@ -10,6 +10,9 @@ export type SimulationBand = { /** 이 금액 이하이면 */ maxPrice: number; 
 export type UsageBucket = { id: string; minDays: number; maxDays: number; /** 계산에 쓰는 대표 일수 */ usedDays: number };
 
 export const policy = {
+  hourlyRate: 10_700,
+  startupMs: 1500,
+  cartSelectionLimit: 10,
   /** #1 시뮬레이션 기간: 가격 구간별 일수 (오름차순, 마지막은 Infinity) */
   simulationBands: [
     { maxPrice: 30_000, days: 3 },
@@ -48,7 +51,7 @@ export const policy = {
   /** #4 일평균 저축액 = 가계부 월 저축액 ÷ daysPerMonth (사용자가 직접 입력하면 그 값 우선) */
   dailySaving: { daysPerMonth: 30 },
 
-  /** #6 시뮬레이션에서 포기한 물품 금액도 목표 게이지에 누적 */
+  /** #6 시뮬레이션 포기를 행동 통계에 포함 (게이지 금액에는 포함하지 않음) */
   abandonCountsAsResisted: true,
 
   /** #8 카테고리 → 가계부 항목 */

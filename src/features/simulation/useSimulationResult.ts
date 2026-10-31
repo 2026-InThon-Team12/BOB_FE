@@ -8,9 +8,7 @@ import { policy } from '@/config/policy';
 import {
   decideItemRemote,
   summarizeItem,
-  useActiveGoal,
   useAnswers,
-  useImpulses,
   useItem,
   useItemQuestions,
   useItems,
@@ -22,7 +20,6 @@ import {
   dayCells,
   daysLeft,
   derivePhase,
-  goalProgress,
   reasonStats,
   reasonWarning,
   summaryNotes,
@@ -40,8 +37,6 @@ export function useSimulationResult(itemId: string | undefined) {
   const questions = useItemQuestions(itemId);
   const answers = useAnswers();
   const items = useItems();
-  const impulses = useImpulses();
-  const goal = useActiveGoal();
   const today = useToday();
   const [busy,setBusy] = useState(false);
   const [decisionError,setError] = useState<string|null>(null);
@@ -76,19 +71,15 @@ export function useSimulationResult(itemId: string | undefined) {
     setBusy(true); setError(null);
     try {
     if (!item) return;
-    const before = goal ? goalProgress({ goal, impulses, items, policy }).ratio : 0;
     const next = await decideItemRemote(item.id, action);
     let result: DecisionOutcome;
     if (action === 'buy') result = { action, reviewAfterDays: policy.reviewAfterDays };
     else if (action === 'hold') result = { action, days: next.simulation.durationDays - item.simulation.durationDays };
     else {
-      const afterItems = items.map((i) => (i.id === next.id ? next : i));
       result = {
         action,
         amount: item.price,
-        goal: goal
-          ? { name: goal.name, before, after: goalProgress({ goal, impulses, items: afterItems, policy }).ratio }
-          : null,
+        goal: null,
       };
     }
     setOutcome(result);

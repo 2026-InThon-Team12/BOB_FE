@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 
 import { policy } from '@/config/policy';
-import { useGoals, useImpulses, useItems, useToday } from '@/data';
+import { useBudgets, useExpenses, useGoals, useImpulses, useItems, useToday } from '@/data';
 import { goalProgress, goalStats, type GoalStats } from '@/lib/calc';
 import { dateKeyOf } from '@/lib/date';
 import type { Goal } from '@/types';
@@ -17,6 +17,8 @@ const MIN_SHELVES = 3;
 
 export function useGoalShelf() {
   const goals = useGoals();
+  const budgets = useBudgets();
+  const expenses = useExpenses();
   const impulses = useImpulses();
   const items = useItems();
   const today = useToday();
@@ -33,7 +35,7 @@ export function useGoalShelf() {
       }));
     const active = goals
       .filter((g) => g.isActive && !g.achievedAt)
-      .map<ShelfSlot>((goal) => ({ kind: 'active', goal, ratio: goalProgress({ goal, impulses, items, policy }).ratio }));
+      .map<ShelfSlot>((goal) => ({ kind: 'active', goal, ratio: goalProgress({ goal, impulses, items, policy, budgets, expenses, today }).ratio }));
     const slots: ShelfSlot[] = [...active, ...achieved, { kind: 'next' }];
     const shelfCount = Math.max(MIN_SHELVES, Math.ceil(slots.length / PER_SHELF));
     const shelves = Array.from({ length: shelfCount }, (_, i) => slots.slice(i * PER_SHELF, i * PER_SHELF + PER_SHELF));
@@ -43,7 +45,7 @@ export function useGoalShelf() {
       achievedCount: achieved.length,
       achievedTotal: achieved.reduce((s, a) => s + (a.kind === 'achieved' ? a.goal.price : 0), 0),
     };
-  }, [goals, impulses, items, today]);
+  }, [goals, impulses, items, today, budgets, expenses]);
 }
 
 /** 목표 달성 화면용 (id가 없으면 가장 최근 달성 목표) */

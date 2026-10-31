@@ -8,6 +8,7 @@ export {
   useActiveGoal,
   useAnswers,
   useBudget,
+  useBudgets,
   useExpenses,
   useGoals,
   useHydrated,
@@ -26,7 +27,7 @@ export { getNow, getNowIso, getThisMonth, getToday, useThisMonth, useToday } fro
 
 // 변경
 export { answerToday } from './actions/answers';
-export { createGoal, deleteGoal, markGoalAchieved, setActiveGoal, updateGoal } from './actions/goals';
+export { refreshGoalAchievements, createGoal, deleteGoal, markGoalAchieved, setActiveGoal, updateGoal } from './actions/goals';
 export { addItems, decideItem, removeItem, submitReview, updateItem, type ItemPatch } from './actions/items';
 export { registerItemsRemote, registerAfterReasons, completeDiscountRegistration } from './actions/remoteItems';
 export {

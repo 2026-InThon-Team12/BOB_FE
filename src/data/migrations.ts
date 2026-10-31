@@ -7,14 +7,27 @@
  *   3. __tests__/migrations.test.ts에 이전 버전 샘플을 추가한다.
  */
 
-import { GoalSchema, ImpulseEventSchema, ItemSchema } from '@/types';
+import { GoalSchema, ImpulseEventSchema, ItemSchema, ExpenseSchema } from '@/types';
+import { newFunding } from '@/lib/calc/funding';
+import { toDateKey } from '@/lib/date';
 
-export const CURRENT_VERSION = 3;
+export const CURRENT_VERSION = 4;
 
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
 
 /** key: 이 버전에서 다음 버전으로 올리는 함수 */
 const MIGRATIONS: Record<number, Migration> = {
+  3: (s) => {
+    const today = toDateKey(new Date());
+    const expenses = Object.values((s.expenses ?? {}) as Record<string, unknown>)
+      .flatMap(e => { const result = ExpenseSchema.safeParse(e); return result.success ? [result.data] : []; });
+    const goals = Object.entries((s.goals ?? {}) as Record<string, unknown>).map(([id, value]) => {
+      const result = GoalSchema.safeParse(value);
+      if (!result.success || !result.data.isActive || result.data.achievedAt || result.data.funding) return [id, value];
+      return [id, { ...result.data, funding: newFunding(today, expenses) }];
+    });
+    return { ...s, goals: Object.fromEntries(goals) };
+  },
   // Goal.productUrl은 선택 필드라 기존 목표 데이터는 그대로 유효하다.
   1: (s) => s,
   // New fields are optional. Preserve old answers and balances; old records without

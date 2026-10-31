@@ -68,6 +68,7 @@ export function useExpenses() {
 }
 
 export const useBudget = (month: string) => useDataStore((s) => s.budgets[month]);
+export const useBudgets = () => useDataStore((s) => s.budgets);
 
 /** 해당 월 가계부가 없으면 가장 최근 달의 가계부 */
 export function useLatestBudget(month: string) {

@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 
 import { policy } from '@/config/policy';
-import { copy } from '@/constants/copy';
+import { copy, updateCopy } from '@/constants/copy';
 
 export type PickedImage = {
   uri: string;
@@ -34,6 +34,15 @@ export async function pickImage(): Promise<PickedImage | null> {
     width: a.width,
     height: a.height,
   };
+}
+
+export async function pickCartImages(): Promise<PickedImage[] | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({mediaTypes: ['images'], quality: 1,
+    allowsMultipleSelection: true, orderedSelection: true, selectionLimit: policy.cartSelectionLimit});
+  if (result.canceled) return null;
+  if (result.assets.length > policy.cartSelectionLimit) throw new Error(updateCopy.multiLimit);
+  return result.assets.map(a => ({uri: a.uri, name: a.fileName ?? undefined, mimeType: a.mimeType ?? undefined,
+    file: a.file ?? undefined, width: a.width, height: a.height}));
 }
 
 /** Match the native APK's upload limits while retaining small screenshot text. */

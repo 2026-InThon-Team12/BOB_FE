@@ -1,57 +1,66 @@
 /** 장바구니 스크린샷 인식 · 링크 불러오기 (원격 AI 호출 → 초안) */
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ai } from '@/ai';
 import { copy } from '@/constants/copy';
-import { pickImage, prepareCartImage, type PickedImage } from '@/lib/image';
+import { orderedBatch } from '@/lib/orderedBatch';
+import { pickCartImages, prepareCartImage, type PickedImage } from '@/lib/image';
 
 import { draftFromAi, emptyDraft, useAddFlow } from './AddFlowContext';
 
 export type ImportResult = 'done' | 'canceled' | 'failed';
 
+type ScanSlot = {image: PickedImage; status: 'pending' | 'done' | 'failed'; rows: ReturnType<typeof draftFromAi>[]; error?: unknown};
 export function useScreenshotImport() {
   const flow = useAddFlow();
-  const [image, setImage] = useState<PickedImage | null>(null);
-  const [pickError, setPickError] = useState<Error | null>(null);
-  const mutation = useMutation({ mutationFn: async (img: PickedImage) =>
-    ai.parseCartScreenshot(await prepareCartImage(img)) });
-
-  /** 사진을 고르고 인식까지. 품목을 하나라도 찾으면 'done' */
-  const pickAndAnalyze = async (): Promise<ImportResult> => {
-    setPickError(null);
-    mutation.reset();
-    let picked: PickedImage | null;
+  const slotsRef = useRef<ScanSlot[]>([]);
+  const running = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {mounted.current = true; return () => {mounted.current = false;};}, []);
+  const [slots, setSlots] = useState<ScanSlot[]>([]);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [pickError, setPickError] = useState<unknown>(null);
+  const run = async (indices: number[]) => {
+    if (running.current) return;
+    running.current = true; setAnalyzing(true);
+    for (const index of indices) slotsRef.current[index] = {...slotsRef.current[index], status: 'pending', error: undefined};
+    setSlots([...slotsRef.current]);
     try {
-      picked = await pickImage();
-    } catch {
-      flow.setRows([]);
-      setPickError(new Error(copy.register.imageUnreadable));
-      return 'failed';
-    }
-    if (!picked) return 'canceled';
-    // 새 분석을 시작하면 이전 사진의 결과는 등록할 수 없도록 즉시 비운다.
-    flow.setRows([]);
-    setImage(picked);
-    try {
-      const analysis = await mutation.mutateAsync(picked);
-      if (analysis.items.length === 0) return 'failed';
-      flow.setRows(analysis.items.map(draftFromAi));
-      return 'done';
-    } catch {
-      return 'failed';
-    }
+      await orderedBatch(indices, async index => {
+        const analysis = await ai.parseCartScreenshot(await prepareCartImage(slotsRef.current[index].image));
+        if (!analysis.items.length) throw new Error(copy.register.analyzeEmpty);
+        return analysis.items.map(draftFromAi);
+      }, (position, result) => {
+        if (!mounted.current) return;
+        const index = indices[position];
+        slotsRef.current[index] = {...slotsRef.current[index], ...(result.status === 'fulfilled'
+          ? {status: 'done' as const, rows: result.value, error: undefined}
+          : {status: 'failed' as const, rows: [], error: result.reason})};
+        setSlots([...slotsRef.current]);
+        flow.setRows(slotsRef.current.flatMap(slot => slot.rows));
+      });
+    } finally {running.current = false;if (mounted.current) setAnalyzing(false);}
   };
-
+  const pickAndAnalyze = async (): Promise<ImportResult> => {
+    if (running.current) return 'canceled';
+    setPickError(null);
+    let picked: PickedImage[] | null;
+    try { picked = await pickCartImages(); }
+    catch (error) {setPickError(error);return 'failed';}
+    if (!mounted.current || !picked?.length) return 'canceled';
+    slotsRef.current = picked.map(image => ({image, status:'pending', rows:[]}));
+    setSlots([...slotsRef.current]); flow.setRows([]);
+    await run(picked.map((_, i) => i));
+    return slotsRef.current.some(s => s.status === 'done') ? 'done' : 'failed';
+  };
   return {
-    image,
-    analyzing: mutation.isPending,
-    failed: !!pickError || mutation.isError || (mutation.isSuccess && mutation.data.items.length === 0),
-    errorMessage: copy.register.imageError(pickError ?? mutation.error),
-    empty: mutation.isSuccess && mutation.data.items.length === 0,
-    warnings: mutation.data?.warnings ?? [],
-    analysisMethod: mutation.data?.analysisMethod,
-    pickAndAnalyze,
+    slots, analyzing, pickAndAnalyze,
+    retryFailed: () => run(slotsRef.current.flatMap((s,i) => s.status === 'failed' ? [i] : [])),
+    completed: slots.filter(s => s.status !== 'pending').length,
+    hasRows: slots.some(s => s.rows.length > 0),
+    failed: !!pickError || slots.some(s => s.status === 'failed'),
+    errorMessage: copy.register.imageError(pickError ?? slots.find(s => s.error)?.error),
   };
 }
 

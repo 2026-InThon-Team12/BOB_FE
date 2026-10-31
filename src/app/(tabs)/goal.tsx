@@ -5,22 +5,17 @@ import { GoalCard } from '@/components/feature';
 import {
   Button,
   Card,
-  Chip,
   EmptyState,
   Icon,
-  Input,
-  MoneyInput,
   Row,
   Screen,
   Stack,
   Text,
   TextLink,
-  useToast,
 } from '@/components/ui';
-import { copy } from '@/constants/copy';
+import { copy, updateCopy } from '@/constants/copy';
 import { useGoalShelf } from '@/features/goal/useGoalShelf';
 import { useImpulse } from '@/features/goal/useImpulse';
-import { formatMonthDay } from '@/lib/format';
 import { makeStyles } from '@/theme';
 
 const useStyles = makeStyles((t) => ({
@@ -43,7 +38,6 @@ const useStyles = makeStyles((t) => ({
 /** 목표 탭 (기능 4, 명세서 4.8) — 목표 카드 · 진열장 · 즉석 개입 */
 export default function GoalScreen() {
   const styles = useStyles();
-  const toast = useToast();
   const imp = useImpulse();
   const shelf = useGoalShelf();
   const { overview } = imp;
@@ -63,22 +57,6 @@ export default function GoalScreen() {
   }
 
   const { goal, progress, dailySaving, eta } = overview;
-
-  const resist = () => {
-    const out = imp.resist();
-    if (!out || out.kind !== 'resisted') return;
-    if (out.reached) {
-      toast(copy.impulse.reached, {
-        label: copy.impulse.seeReached,
-        onPress: () => router.push({ pathname: '/goals/done', params: { id: goal.id } }),
-      });
-    } else {
-      toast(copy.impulse.resisted(out.amount));
-    }
-  };
-  const giveIn = () => {
-    if (imp.giveIn()) toast(copy.impulse.gaveIn);
-  };
 
   return (
     <Screen title={copy.goal.title} titleAction={<TextLink label={copy.goal.change} onPress={toNewGoal} />}>
@@ -111,114 +89,10 @@ export default function GoalScreen() {
         </Row>
       </Card>
 
-      {progress.achieved ? (
-        <Card tone="brandSubtle">
-          <Stack gap={3}>
-            <Text variant="heading" tone="brand">
-              {copy.main.goalReached}
-            </Text>
-            <Button
-              label={copy.impulse.achievedCta}
-              fullWidth
-              onPress={() => router.push({ pathname: '/goals/done', params: { id: goal.id } })}
-            />
-            <Button label={copy.goalDone.next} variant="ghost" fullWidth onPress={toNewGoal} />
-          </Stack>
-        </Card>
-      ) : (
-        <>
-          <Text variant="heading">{copy.impulse.title}</Text>
-          <Row gap={2} wrap>
-            {imp.presets.map((p, i) => (
-              <Chip
-                key={p.label}
-                label={copy.impulse.preset(p.label, p.amount)}
-                selectedStyle="inverse"
-                selected={imp.picked === i}
-                onPress={() => imp.pick(i)}
-              />
-            ))}
-            <Chip
-              label={copy.impulse.custom}
-              dashed={imp.picked !== 'custom'}
-              selectedStyle="inverse"
-              selected={imp.picked === 'custom'}
-              onPress={() => imp.pick('custom')}
-            />
-          </Row>
-          {imp.picked === 'custom' && (
-            <Row gap={3} align="flex-start">
-              <View style={styles.half}>
-                <Input
-                  label={copy.impulse.customName}
-                  placeholder={copy.impulse.customNamePlaceholder}
-                  value={imp.customName}
-                  onChangeText={imp.setCustomName}
-                />
-              </View>
-              <View style={styles.half}>
-                <MoneyInput
-                  label={copy.impulse.customAmount}
-                  placeholder="0"
-                  value={imp.customAmount}
-                  onChangeValue={imp.setCustomAmount}
-                />
-              </View>
-            </Row>
-          )}
-
-          {imp.ready && (
-            <Card>
-              {imp.delay !== null && imp.dailySaving ? (
-                <Stack gap={4}>
-                  <Text variant="title">
-                    {copy.impulse.headline(imp.label, goal.name)}
-                    <Text variant="title" tone="brand">
-                      {copy.impulse.late(imp.delay)}
-                    </Text>
-                    {copy.impulse.lateSuffix}
-                  </Text>
-                  {imp.etaIfResist && imp.etaIfBuy && (
-                    <Row gap={2}>
-                      <View style={styles.half}>
-                        <Card tone="subtle" padding={4}>
-                          <Text variant="caption" tone="secondary">
-                            {copy.impulse.ifResist}
-                          </Text>
-                          <Text variant="heading">{formatMonthDay(imp.etaIfResist)}</Text>
-                        </Card>
-                      </View>
-                      <View style={styles.arrow}>
-                        <Icon name="arrowRight" tone="tertiary" />
-                      </View>
-                      <View style={styles.half}>
-                        <Card tone="brandSubtle" padding={4}>
-                          <Text variant="caption" tone="brand">
-                            {copy.impulse.ifBuy}
-                          </Text>
-                          <Text variant="heading" tone="brand">
-                            {formatMonthDay(imp.etaIfBuy)}
-                          </Text>
-                        </Card>
-                      </View>
-                    </Row>
-                  )}
-                  <Text variant="caption" tone="tertiary">
-                    {copy.impulse.formula(imp.amount, imp.dailySaving, imp.delay)}
-                  </Text>
-                </Stack>
-              ) : (
-                <Text variant="label" tone="secondary">
-                  {copy.impulse.noSaving}
-                </Text>
-              )}
-            </Card>
-          )}
-
-          <Button label={copy.impulse.resist(imp.amount)} size="lg" fullWidth disabled={!imp.ready} onPress={resist} />
-          <Button label={copy.impulse.giveIn} variant="ghost" fullWidth disabled={!imp.ready} onPress={giveIn} />
-        </>
-      )}
+      <Text variant="caption" tone="secondary">{updateCopy.estimated}</Text>
+      {overview.usesPreviousBudget && <Text variant="caption" tone="secondary">{updateCopy.recurring}</Text>}
+      {progress.achieved && <Button label={copy.impulse.achievedCta} fullWidth onPress={() => router.push({ pathname: '/goals/done', params: { id: goal.id } })}/>}
+      <Button label={updateCopy.impulseCta} icon="clock" fullWidth onPress={() => router.push('/impulse')}/>
     </Screen>
   );
 }

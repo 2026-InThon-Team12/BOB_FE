@@ -1,23 +1,28 @@
 /** 기능 4: 목표 비교 */
 import type { Policy } from '@/config/policy';
-import type { Goal, ImpulseEvent, Item, MonthlyBudget } from '@/types';
+import type { Expense, Goal, ImpulseEvent, Item, MonthlyBudget } from '@/types';
 import { addDays, dateKeyOf, diffDays, daysInMonth } from '@/lib/date';
+import { fundingPlan } from './funding';
+import { discretionaryLimit } from './budget';
 
 /** 일평균 저축액. 직접 입력값이 있으면 우선, 없으면 가계부 월 저축액 ÷ daysPerMonth */
 export function dailySaving(params: {
   budget: MonthlyBudget | undefined;
   override: number | null;
   policy: Pick<Policy, 'dailySaving'>;
+  remaining?: number;
+  today?: string;
 }): number | null {
-  const { budget, override } = params;
-  if (override !== null && override > 0) return override;
-  if (!budget || budget.saving <= 0) return null;
-  return budget.saving / daysInMonth(budget.month);
+  const { budget, today } = params;
+  if (!budget) return null;
+  const available = params.remaining ?? discretionaryLimit(budget);
+  const days = daysInMonth(today?.slice(0, 7) ?? budget.month) - (today ? Number(today.slice(8)) - 1 : 0);
+  return available > 0 ? available / days : null;
 }
 
 /** "이거 사면 목표가 N일 늦게 와요" = max(1, round(지출액 ÷ 일평균 저축액)) (명세서 5장). 저축액을 모르면 null */
 export const delayDays = (amount: number, saving: number | null) =>
-  saving && saving > 0 && amount > 0 ? Math.max(1, Math.round(amount / saving)) : null;
+  saving && saving > 0 && amount > 0 ? Math.max(1, Math.ceil(amount / saving)) : null;
 
 export type GoalProgress = {
   saved: number;
@@ -37,8 +42,12 @@ export function goalProgress(params: {
   impulses: ImpulseEvent[];
   items: Item[];
   policy: Pick<Policy, 'abandonCountsAsResisted'>;
+  budgets?: Record<string, MonthlyBudget>;
+  expenses?: Expense[];
+  today?: string;
 }): GoalProgress {
   const { goal, impulses, items, policy } = params;
+  if (goal.funding) return fundingPlan(goal, params.budgets ?? {}, params.expenses ?? [], params.today ?? goal.funding.startsOn);
   const saved = goalCredits(goal, impulses, items, policy.abandonCountsAsResisted).reduce((sum, row) => sum + row.amount, 0);
   const ratio = goal.price > 0 ? Math.min(1, saved / goal.price) : 1;
   return { saved, ratio, achieved: saved >= goal.price, remaining: Math.max(0, goal.price - saved) };
@@ -98,7 +107,7 @@ export function goalCredits(goal: Goal, impulses: ImpulseEvent[], items: Item[],
     ...impulses.filter(e => e.decision === 'resisted' && !e.cancelledAt).map(e => [`impulse:${e.id}`, e.amount] as const),
     ...items.filter(i => i.status === 'abandoned').map(i => [`item:${i.id}`, i.price] as const),
   ]);
-  const credits = (goal.allocations ?? (goal.carriedAmount ? [{sourceId: `legacy:${goal.id}`, amount: goal.carriedAmount}] : []))
+  const credits = (goal.allocations ?? (goal.carriedAmount && !goal.funding ? [{sourceId: `legacy:${goal.id}`, amount: goal.carriedAmount}] : []))
     .map(row => ({...row, amount: Math.min(row.amount, row.sourceId.startsWith('legacy:') ? row.amount : sources.get(row.sourceId) ?? 0)}));
   if (!goal.closedAt) {
     for (const e of impulses) if (e.goalId === goal.id && e.decision === 'resisted' && !e.cancelledAt && !credits.some(r => r.sourceId === `impulse:${e.id}`)) credits.push({sourceId: `impulse:${e.id}`, amount: e.amount});

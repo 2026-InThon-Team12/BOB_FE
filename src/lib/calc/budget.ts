@@ -25,7 +25,7 @@ export const bucketForCategory = (
 ): BucketId => policy.categoryToBucket[category] ?? policy.defaultBucket;
 
 export const spentInMonth = (expenses: Expense[], bucket: BucketId, month: string) =>
-  expenses.filter((e) => e.bucket === bucket && monthKeyOf(e.at) === month).reduce((s, e) => s + e.amount, 0);
+  expenses.filter((e) => (e.source === 'manual' ? e.bucket : 'discretionary') === bucket && monthKeyOf(e.at) === month).reduce((s, e) => s + e.amount, 0);
 
 export type BucketBalance = { bucket: BucketId; limit: number; spent: number; remaining: number };
 

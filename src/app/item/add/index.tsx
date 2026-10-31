@@ -57,7 +57,7 @@ export default function AddMethodScreen() {
       <Text variant="label" tone="secondary">
         {copy.register.otherTitle}
       </Text>
-      <Card onPress={() => router.push('/goal')} accessibilityLabel={copy.register.otherImpulseTitle}>
+      <Card onPress={() => router.push('/impulse')} accessibilityLabel={copy.register.otherImpulseTitle}>
         <Row gap={3}>
           <Stack flex={1} gap={1}>
             <Text variant="bodyStrong">{copy.register.otherImpulseTitle}</Text>

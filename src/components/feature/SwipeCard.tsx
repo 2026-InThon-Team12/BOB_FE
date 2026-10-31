@@ -2,13 +2,14 @@ import { useEffect, useImperativeHandle, useRef, useState, type ComponentRef, ty
 import { AccessibilityInfo, Animated, Easing, PanResponder, Platform, View } from 'react-native';
 
 import { Icon, Stack, Text, type IconName } from '@/components/ui';
-import { makeStyles } from '@/theme';
+import { makeStyles, useTheme } from '@/theme';
 
 export type SwipeDirection = 'right' | 'left' | 'up';
 
 export type SwipeCardHandle = {
   /** 버튼으로 답할 때도 같은 날아가는 애니메이션을 쓴다 */
   swipe: (direction: SwipeDirection) => void;
+  reset: () => void;
 };
 
 /** 명세서 4.5 제스처 수치 */
@@ -69,7 +70,7 @@ function createSwipeController(pos: Animated.ValueXY) {
   };
   /** 새로 끌기 시작하면 아직 돌아가는 중인 되돌림 애니메이션을 멈춘다 — 안 멈추면 끄는 위치를 덮어쓴다 */
   const grab = () => pos.stopAnimation();
-  const reset = () => Animated.timing(pos, { toValue: { x: 0, y: 0 }, ...timing() }).start();
+  const reset = () => {busy = false; Animated.timing(pos, { toValue: { x: 0, y: 0 }, ...timing() }).start();};
   const move = (dx: number, dy: number) => pos.setValue({ x: dx, y: Math.min(dy, 40) });
   const release = (dx: number, dy: number) => {
     const dir = swipeDirection(dx, dy);
@@ -140,13 +141,14 @@ const useStyles = makeStyles((t) => ({
  */
 export function SwipeCard({ children, onSwipe, position, overlays, ref }: Props) {
   const styles = useStyles();
+  const theme = useTheme();
   const [gesture] = useState(() => createSwipeController(position));
   const nodeRef = useRef<ComponentRef<typeof View>>(null);
 
   // 새 카드는 제자리에서 시작
   useEffect(() => position.setValue({ x: 0, y: 0 }), [position]);
   useEffect(() => gesture.setOnSwipe(onSwipe), [gesture, onSwipe]);
-  useImperativeHandle(ref, () => ({ swipe: gesture.fling }), [gesture]);
+  useImperativeHandle(ref, () => ({ swipe: gesture.fling, reset: gesture.reset }), [gesture]);
 
   // 웹: 포인터 이벤트로 직접 끌기 처리
   useEffect(() => {
@@ -218,9 +220,9 @@ export function SwipeCard({ children, onSwipe, position, overlays, ref }: Props)
         >
           <Stack align="center" gap={4}>
             <View style={styles.overlayIcon}>
-              <Icon name={overlays[d].icon} size="xl" color={overlays[d].color} />
+              <Icon name={overlays[d].icon} size="xl" color={d === 'up' ? theme.color.text.onBrand : overlays[d].color} />
             </View>
-            <Text variant="display" tone={d === 'right' ? 'onBrand' : 'inverse'}>
+            <Text variant="display" tone={d === 'left' ? 'inverse' : 'onBrand'}>
               {overlays[d].label}
             </Text>
           </Stack>

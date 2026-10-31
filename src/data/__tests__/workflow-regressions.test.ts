@@ -1,4 +1,4 @@
-import { addItems, createGoal, decideItem, getToday, recordImpulse, removeImpulse, resetAllData, shiftClock, loadTodayReflections, saveReflection, summarizeItem, decideItemRemote, submitReviewRemote } from '@/data';
+import { setMonthlyBudget, addItems, createGoal, decideItem, getToday, recordImpulse, removeImpulse, resetAllData, shiftClock, loadTodayReflections, saveReflection, summarizeItem, decideItemRemote, submitReviewRemote } from '@/data';
 import { getState, update } from '@/data/store';
 import { applyRemoteItem } from '@/data/actions/remoteItems';
 import { simulationDayNumber } from '@/lib/calc/itemMachine';
@@ -14,26 +14,36 @@ import { migrate } from '@/data/migrations';
 jest.mock('@/api',()=>({bobApi:{simulations:{localQuestion:jest.fn(),summarize:jest.fn()},purchases:{localQuestion:jest.fn(),putReview:jest.fn()},items:{putDecision:jest.fn()}}}));
 jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
 const input={name:'키보드',price:20000,category:'digital' as const,reasons:['need' as const],source:'manual' as const};
-const progress=(id:string)=>{const s=getState();return goalProgress({goal:s.goals[id],impulses:Object.values(s.impulses),items:Object.values(s.items),policy});};
+const progress=(id:string)=>{const s=getState();return goalProgress({goal:s.goals[id],impulses:Object.values(s.impulses),items:Object.values(s.items),policy,budgets:s.budgets,expenses:Object.values(s.expenses),today:getToday()});};
 beforeEach(()=>{resetAllData();jest.resetAllMocks();});
-it('goal replacement retains the remainder, cancels transferred sources, and does not credit future Byes to the closed goal',()=>{
-  const old=createGoal({name:'목표1',price:100000});
-  const event=recordImpulse({label:'참기',amount:70000,decision:'resisted'});
-  const next=createGoal({name:'목표2',price:50000,carriedAmount:50000});
-  expect(progress(old.id).saved).toBe(20000);expect(progress(next.id).saved).toBe(50000);
-  expect(getState().goals[next.id].achievedAt).toBeTruthy();
-  const [item]=addItems([input]);decideItem(item.id,'abandon');
-  expect(progress(old.id).saved).toBe(20000);expect(progress(next.id).saved).toBe(70000);expect(progress(next.id).ratio).toBe(1);
-  removeImpulse(event.id);expect(progress(old.id).saved).toBe(0);expect(progress(next.id).saved).toBe(20000);
-  expect(getState().goals[next.id].achievedAt).toBeTruthy();
+it('calendar savings transfer retains the remainder and resisting never credits either goal',()=>{
+  const now=jest.spyOn(Date,'now').mockReturnValue(new Date('2026-11-01T03:00:00Z').getTime());
+  try {
+    setMonthlyBudget({month:'2026-11',income:300000,food:0,living:0,transport:0,saving:0});
+    const old=createGoal({name:'목표1',price:100000});
+    const event=recordImpulse({label:'참기',amount:70000,decision:'resisted'});
+    expect(progress(old.id).saved).toBe(0);
+    shiftClock(7);
+    const next=createGoal({name:'목표2',price:50000,carriedAmount:50000});
+    expect(progress(old.id).saved).toBe(20000);expect(progress(next.id).saved).toBe(50000);
+    expect(getState().goals[next.id].achievedAt).toBeTruthy();
+    const [item]=addItems([input]);decideItem(item.id,'abandon');
+    removeImpulse(event.id);
+    expect(progress(old.id).saved).toBe(20000);expect(progress(next.id).saved).toBe(50000);
+  } finally {now.mockRestore();}
 });
-it('transfer OFF preserves old savings, and chained transfers follow the original cancellation',()=>{
-  const a=createGoal({name:'A',price:100000});const event=recordImpulse({label:'커피',amount:30000,decision:'resisted'});
-  const b=createGoal({name:'B',price:100000,carriedAmount:30000});const c=createGoal({name:'C',price:100000,carriedAmount:30000});
-  expect(progress(a.id).saved).toBe(0);expect(progress(b.id).saved).toBe(0);expect(progress(c.id).saved).toBe(30000);
-  removeImpulse(event.id);expect(progress(c.id).saved).toBe(0);
-  recordImpulse({label:'배달',amount:20000,decision:'resisted'});const d=createGoal({name:'D',price:100000,carriedAmount:0});
-  expect(progress(c.id).saved).toBe(20000);expect(progress(d.id).saved).toBe(0);
+it('transfer OFF preserves calendar savings and reserves already allocated monthly money',()=>{
+  const now=jest.spyOn(Date,'now').mockReturnValue(new Date('2026-11-01T03:00:00Z').getTime());
+  try {
+    setMonthlyBudget({month:'2026-11',income:300000,food:0,living:0,transport:0,saving:0});
+    const a=createGoal({name:'A',price:100000});shiftClock(3);
+    const b=createGoal({name:'B',price:100000,carriedAmount:30000});
+    const c=createGoal({name:'C',price:100000,carriedAmount:30000});
+    expect(progress(a.id).saved).toBe(0);expect(progress(b.id).saved).toBe(0);expect(progress(c.id).saved).toBe(30000);
+    const d=createGoal({name:'D',price:500000,carriedAmount:0});
+    expect(progress(c.id).saved).toBe(30000);expect(progress(d.id).saved).toBe(0);
+    shiftClock(27);expect(progress(d.id).saved).toBe(270000);expect(progress(c.id).saved).toBe(30000);
+  } finally {now.mockRestore();}
 });
 it('partial screenshot results survive mapping and ambiguous selection is not silently included',()=>{
   const output=mapCartScreenshot({items:[{name:'치약',price:null,category:'BEAUTY',review_fields:['price']}],review_items:[{name:'필름',price:15900,category:'DIGITAL',review_fields:['selection']}],analysis_method:'vision',warnings:[]});

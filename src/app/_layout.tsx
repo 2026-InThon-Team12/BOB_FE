@@ -8,9 +8,11 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { Startup } from '@/components/feature/Startup';
+import { policy } from '@/config/policy';
 import { PhoneFrame, ToastProvider } from '@/components/ui';
 import { useHydrated, useSettings } from '@/data';
 import { useReminderSync } from '@/features/simulation/useReminderSync';
@@ -27,6 +29,8 @@ function RootNavigator() {
   const hydrated = useHydrated();
   // 글꼴을 못 불러와도(오프라인 등) 시스템 글꼴로 계속 진행한다
   const [fontsLoaded, fontError] = useFonts(FONTS);
+  const [startup, setStartup] = useState(true);
+  useEffect(() => {const timer=setTimeout(() => setStartup(false), policy.startupMs);return () => clearTimeout(timer);}, []);
   const ready = hydrated && (fontsLoaded || !!fontError);
 
   return (
@@ -53,6 +57,7 @@ function RootNavigator() {
         </Stack>
       )}
       {ready && <NotificationSync />}
+      {(startup || !ready) && <Startup/>}
       </ToastProvider>
     </PhoneFrame>
   );

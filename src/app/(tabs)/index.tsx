@@ -6,6 +6,7 @@ import {
   Brand,
   Button,
   Card,
+  Chip,
   EmptyState,
   Icon,
   ProgressBar,
@@ -17,7 +18,8 @@ import {
   Thumbnail,
 } from '@/components/ui';
 import { env } from '@/config/env';
-import { copy } from '@/constants/copy';
+import { copy, updateCopy } from '@/constants/copy';
+import { useImpulse } from '@/features/goal/useImpulse';
 import { useHome, type SimRow } from '@/features/home/useHome';
 import { formatWon } from '@/lib/format';
 import { makeStyles, useTheme } from '@/theme';
@@ -82,20 +84,33 @@ function SimListRow({ row, first }: { row: SimRow; first: boolean }) {
 export default function HomeScreen() {
   const styles = useStyles();
   const home = useHome();
+  const impulse = useImpulse();
+  const openImpulse = () => router.push({pathname: '/impulse', params: {preset: String(impulse.picked)}});
   const { goal } = home;
 
   return (
     <Screen>
       <View style={styles.header}>
         <Brand label={copy.main.logo} tagline={copy.main.tagline} />
-        <Pressable style={styles.bell} accessibilityRole="button" accessibilityLabel={copy.check.title} onPress={() => router.push('/check')}>
-          <Icon name="bell" />
+        <Pressable style={styles.bell} accessibilityRole="button" accessibilityLabel={updateCopy.help} onPress={() => router.push('/help')}>
+          <Icon name="help" />
         </Pressable>
       </View>
 
+      <Card tone="brand">
+        <Stack gap={3}>
+          <Text variant="title">{updateCopy.impulseTitle}</Text>
+          <Text>{updateCopy.impulseBody}</Text>
+          <Row gap={2} wrap>{impulse.presets.map((preset,i) => <Chip key={preset.label} label={preset.label} selected={impulse.picked===i} selectedStyle="inverse" onPress={()=>impulse.pick(i)}/>)}<Chip label={copy.impulse.custom} onPress={()=>router.push({pathname:'/impulse',params:{preset:'custom'}})}/></Row>
+          <Text variant="caption">{impulse.label} · {formatWon(impulse.amount)}</Text>
+          <Text variant="display">{updateCopy.workTime(impulse.workMinutes)}</Text>
+          <Text variant="caption">{updateCopy.workBasis}</Text>
+          <Button label={updateCopy.impulseCta} variant="onBrand" fullWidth onPress={openImpulse}/>
+        </Stack>
+      </Card>
       {/* 오늘의 질문 */}
       {home.todayCount > 0 ? (
-        <Card tone="brand">
+        <Card tone="brandSubtle">
           <Stack gap={4}>
             <Row justify="space-between">
               <Text variant="label" tone="onBrand">

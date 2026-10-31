@@ -90,9 +90,9 @@ describe('가계부 (기능 7)', () => {
 });
 
 describe('목표 (기능 4)', () => {
-  it('일평균 저축액: 직접 입력 우선, 없으면 가계부', () => {
-    expect(dailySaving({ budget, override: null, policy })).toBeCloseTo(500_000 / 31);
-    expect(dailySaving({ budget, override: 10_000, policy })).toBe(10_000);
+  it('일평균 저축액: 남은 자유 소비 예산 기준', () => {
+    expect(dailySaving({ budget, override: null, policy })).toBeCloseTo(900_000 / 31);
+    expect(dailySaving({ budget, override: 10_000, policy })).toBeCloseTo(900_000 / 31);
     expect(dailySaving({ budget: undefined, override: null, policy })).toBeNull();
   });
 

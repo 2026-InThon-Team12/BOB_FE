@@ -109,6 +109,7 @@ const lightColor = {
   gold: palette.gold,
   /** 스와이프 "딱히 없었어요" 오버레이 (명세서 #4A3428) */
   swipeNo: palette.earth700,
+  swipeUnsure: palette.earth200,
   /** 목표 진열장 */
   shelf: { bg: palette.shelfBg, wall: palette.shelfWall, plank: palette.shelfPlank, stamp: palette.shelfStamp },
   track: palette.earth150,
@@ -168,6 +169,7 @@ const darkColor: ColorTokens = {
   switchOff: palette.earth600,
   gold: palette.gold,
   swipeNo: palette.earth600,
+  swipeUnsure: palette.earth200,
   shelf: { bg: palette.earth700, wall: palette.earth600, plank: palette.earth500, stamp: palette.earth950 },
   track: palette.earth700,
   predicted: palette.earth500,

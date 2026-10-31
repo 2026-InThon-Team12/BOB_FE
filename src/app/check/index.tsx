@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { ReflectionAnswerForm } from '@/components/feature/ReflectionAnswerForm';
+import { ReflectionSwipe, isThreeWay } from '@/components/feature/ReflectionSwipe';
 import { Button, Card, EmptyState, Row, Screen, ScreenHeader, SegmentedProgress, Stack, Text, Thumbnail } from '@/components/ui';
 import { CATEGORY_LABELS } from '@/constants/categories';
 import { copy, reflectionCopy } from '@/constants/copy';
@@ -40,7 +41,7 @@ export default function TodayCheckScreen() {
       ) : check.error ? (
         <Card tone="warning"><Stack><Text tone="warning">{check.error}</Text><Button label={reflectionCopy.retry} onPress={check.retry} /></Stack></Card>
       ) : entry ? (
-        <Card floating>
+        <ReflectionSwipe key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer}><Card floating>
           <Stack gap={4}>
             <Row gap={3}>
               <Thumbnail uri={entry.item.imageUri} placeholder={copy.common.imagePlaceholder} />
@@ -53,10 +54,10 @@ export default function TodayCheckScreen() {
             <Text variant="label" tone="secondary">{entry.question.phase === 'post' ? reflectionCopy.post : reflectionCopy.pre}</Text>
             <View style={styles.question}><Text variant="title">{entry.text}</Text></View>
             {entry.question.reference && <Text tone="secondary">{entry.question.reference}</Text>}
-            <ReflectionAnswerForm key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer} />
+            {!isThreeWay(entry.question.answerSpec as AnswerSpec) && <ReflectionAnswerForm key={entry.question.id} spec={entry.question.answerSpec as AnswerSpec} onAnswer={check.answer} />}
             <Text variant="caption" tone="tertiary">{entry.question.generationMethod === 'AI' ? reflectionCopy.aiQuestion : reflectionCopy.fallbackQuestion}</Text>
           </Stack>
-        </Card>
+        </Card></ReflectionSwipe>
       ) : (
         <Card><EmptyState icon="check" title={reflectionCopy.allAnswered} /></Card>
       )}

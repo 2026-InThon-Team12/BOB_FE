@@ -191,6 +191,15 @@ export const GoalSchema = z.object({
   closedAt: IsoString.optional(),
   // Origin-linked allocations allow cancellation to follow transfers across goals.
   allocations: z.array(z.object({ sourceId: Id, amount: Won })).optional(),
+  funding: z.object({
+    startsOn: DateKeySchema,
+    openingBalance: Won,
+    baselineSpent: Won,
+    reservedThisMonth: Won,
+    frozenBalance: Won.optional(),
+    frozenAllocated: Won.optional(),
+    frozenOn: DateKeySchema.optional(),
+  }).optional(),
 });
 export type Goal = z.infer<typeof GoalSchema>;
 

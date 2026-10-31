@@ -2,8 +2,9 @@
 import { useMemo, useState } from 'react';
 
 import { policy } from '@/config/policy';
-import { setMonthlyBudget, useLatestBudget, useThisMonth } from '@/data';
+import { useExpenses, useToday, setMonthlyBudget, useLatestBudget, useThisMonth } from '@/data';
 import { dailySaving, discretionaryLimit } from '@/lib/calc';
+import { freeSpentThrough } from '@/lib/calc/funding';
 import type { MonthlyBudget } from '@/types';
 
 export const BUDGET_FIELDS = ['income', 'food', 'living', 'transport', 'saving'] as const;
@@ -14,6 +15,8 @@ const EMPTY: Values = { income: null, food: null, living: null, transport: null,
 
 export function useBudgetForm() {
   const month = useThisMonth();
+  const today = useToday();
+  const expenses = useExpenses();
   const base = useLatestBudget(month);
   // 이번 달 계획이 없으면 가장 최근 달 값으로 미리 채운다
   const prefilledFrom = base && base.month !== month ? base.month : null;
@@ -51,7 +54,7 @@ export function useBudgetForm() {
     /** 자유롭게 쓸 수 있는 돈 (음수면 계획이 수입보다 많음) */
     free,
     overBudget: free < 0,
-    dailySaving: dailySaving({ budget, override: null, policy }),
+    dailySaving: dailySaving({ budget, override: null, policy, today, remaining: free - freeSpentThrough(expenses, today) }),
     prefilledFrom,
     errors: { income: submitted && incomeMissing },
     submit,
