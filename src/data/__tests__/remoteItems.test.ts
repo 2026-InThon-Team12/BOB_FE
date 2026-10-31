@@ -10,7 +10,8 @@ jest.mock('@/config/env', () => ({ env: { aiMode: 'real' } }));
 
 const post = bobApi.items.batchCreate as jest.Mock;
 const rule: DiscountRule = { minAmount: 30000, value: 10, unit: 'pct', freeShipOn: true, freeShipMin: 50000, shipFee: 3000 };
-beforeEach(() => { post.mockReset(); post.mockResolvedValue({ items: [] }); resetAllData(); });
+const responseFor = (body: {items: unknown[]; discount_review?: {decision:string;needed_item_indexes:number[]}}) => ({items:body.items.flatMap((_,index)=>body.discount_review?.decision === 'NEEDED' && !body.discount_review.needed_item_indexes.includes(index) ? [] : [{id:`server-${index}`,decision:null,simulation:{id:`sim-${index}`,start_date:'2026-11-02',end_date_exclusive:'2026-11-05',duration_days:3,observation_dates:['2026-11-02','2026-11-03','2026-11-04']},purchase:null}])});
+beforeEach(() => { post.mockReset(); post.mockImplementation(async body=>responseFor(body)); resetAllData(); });
 
 describe('BE 품목 등록 mapper', () => {
   it('카테고리·이유·출처를 OpenAPI enum으로 변환한다', () => {
@@ -54,23 +55,25 @@ describe('할인 확인 후 등록', () => {
   });
 
   it('추가 할인 이유가 없으면 일반 등록을 그대로 완료한다', async () => {
-    await expect(registerAfterReasons([makeItem({ reasons: ['need'] })], 'reg_normal_123')).resolves.toBe('done');
-    expect(post).toHaveBeenCalledWith({ items: [expect.objectContaining({ purchase_reasons: ['NECESSITY'] })] }, 'reg_normal_123');
+    await expect(registerAfterReasons(addItems([{name:'키보드',price:50000,category:'digital',reasons:['need'],source:'manual'}],true), 'reg_normal_123')).resolves.toBe('done');
+    expect(post).toHaveBeenCalledWith({ items: [expect.objectContaining({ purchase_reasons: ['NECESSITY'] })] }, expect.stringMatching(/^reg_normal_123-/));
   });
 
-  it('화면의 품목 순서에 맞는 인덱스와 할인·배송 조건을 함께 보내고 성공한 뒤만 Bye한다', async () => {
+  it('화면의 품목 순서에 맞는 인덱스와 할인·배송 조건을 함께 보내고 성공 후 제외한 초안을 적립 없이 제거한다', async () => {
     const items = createCart();
-    post.mockImplementationOnce(async () => {
+    post.mockImplementationOnce(async body => {
       expect(getState().items[items[0].id].status).toBe('simulating');
-      return {};
+      return responseFor(body);
     });
     const review = { rule, neededIds: [items[1].id], decision: 'NEEDED' as const };
     await expect(completeDiscountRegistration(items, review, 'reg_test_123')).resolves.toBe(1);
     expect(post).toHaveBeenCalledWith(expect.objectContaining({ discount_review: {
       decision: 'NEEDED', needed_item_indexes: [1],
       rule: { minimum_amount: 30000, unit: 'PCT', value: 10, shipping_fee: 3000, free_shipping_enabled: true, free_shipping_minimum: 50000 },
-    } }), 'reg_test_123');
-    expect(getState().items[items[0].id].status).toBe('abandoned');
+    } }), expect.stringMatching(/^reg_test_123-/));
+    expect(getState().items[items[0].id]).toBeUndefined();
+    expect(Object.keys(getState().impulses)).toHaveLength(0);
+    expect(getState().items[items[1].id]).toMatchObject({remoteId:'server-1',simulationId:'sim-1',registrationState:'complete'});
     expect(getState().items[items[1].id].status).toBe('simulating');
   });
 

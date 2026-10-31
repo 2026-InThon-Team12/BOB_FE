@@ -101,6 +101,7 @@ export function buildDemoState(now: Date): DataState {
       reasons: spec.reasons,
       source: 'manual',
       status: spec.status,
+      ...(spec.review ? {summary:{text:'데모: 구매 전 사용일수 예측',method:'DEMO',expectedDays:spec.category==='digital' ? 25 : 15,coverage:1,eligible:true,reason:null,fingerprint:'demo'}} : {}),
       createdAt: startAt,
       simulation: { startAt, durationDays: simulationDays(spec.price, policy.simulationBands) + (spec.held ?? 0) },
       ...(spec.decided !== undefined ? { decidedAt: at(spec.decided) } : {}),

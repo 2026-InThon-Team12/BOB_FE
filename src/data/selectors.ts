@@ -22,6 +22,11 @@ export function useHydrated(): boolean {
 
 export function useItems(): Item[] {
   const items = useDataStore((s) => s.items);
+  return useMemo(() => Object.values(items).filter((i) => i.registrationState !== 'pending').sort(byCreatedDesc), [items]);
+}
+
+export function useRegistrationItems(): Item[] {
+  const items = useDataStore((s) => s.items);
   return useMemo(() => Object.values(items).sort(byCreatedDesc), [items]);
 }
 
@@ -54,7 +59,7 @@ export function useActiveGoal() {
 
 export function useImpulses() {
   const impulses = useDataStore((s) => s.impulses);
-  return useMemo(() => Object.values(impulses).sort((a, b) => b.at.localeCompare(a.at)), [impulses]);
+  return useMemo(() => Object.values(impulses).filter(e=>!e.cancelledAt).sort((a, b) => b.at.localeCompare(a.at)), [impulses]);
 }
 
 export function useExpenses() {

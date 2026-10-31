@@ -33,14 +33,14 @@ export function useHome() {
       if (phase === 'awaitingReview' && !review) review = item;
       if (phase !== 'simulating' && phase !== 'awaitingDecision') continue;
       const total = item.simulation.durationDays;
-      const day = Math.min(total, Math.max(1, simulationDayNumber(item, today)));
+      const day = Math.min(total, Math.max(0, simulationDayNumber(item, today)));
       rows.push({
         item,
         categoryLabel: CATEGORY_LABELS[item.category],
         resultReady: phase === 'awaitingDecision',
         day,
         total,
-        ratio: day / total,
+        ratio: total ? day / total : 1,
       });
     }
     // 결과 도착이 먼저, 그다음 먼저 등록한 순
@@ -52,7 +52,7 @@ export function useHome() {
     /** 오늘 답할 품목 수 (0이면 오늘 답변 완료 또는 시뮬레이션 없음) */
     todayCount: questions.entries.length,
     /** 시뮬레이션 중인 물건이 있지만 오늘 질문은 다 답함 */
-    todayDone: questions.entries.length === 0 && simulating.some((r) => !r.resultReady),
+    todayDone: questions.entries.length === 0 && simulating.some((r) => !r.resultReady && r.day > 0),
     goal,
     reviewDue,
     simulating,

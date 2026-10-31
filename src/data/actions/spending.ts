@@ -1,4 +1,5 @@
 /** 참기 기록(기능 4)과 지출 원장·가계부(기능 7) */
+import { refreshGoalAchievements } from './goals';
 import { policy } from '@/config/policy';
 import { createId } from '@/lib/id';
 import type { BucketId, Expense, ImpulseEvent, MonthlyBudget } from '@/types';
@@ -53,12 +54,14 @@ export function recordImpulse(input: {
     impulses: { ...s.impulses, [event.id]: event },
     ...(expense ? { expenses: { ...s.expenses, [expense.id]: expense } } : {}),
   }));
+  refreshGoalAchievements();
   return event;
 }
 
 export function removeImpulse(id: string): void {
   update((s) => {
-    const { [id]: _removed, ...impulses } = s.impulses;
+    if (!s.impulses[id] || s.impulses[id].cancelledAt) return {};
+    const impulses = {...s.impulses,[id]:{...s.impulses[id],cancelledAt:getNowIso()}};
     const expenses = Object.fromEntries(
       Object.entries(s.expenses).filter(([, e]) => !(e.source === 'impulse' && e.refId === id)),
     );

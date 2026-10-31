@@ -1,7 +1,7 @@
 /** 기능 1: 시뮬레이션 계산 */
 import type { SimulationBand } from '@/config/policy';
 import type { DailyAnswer, Item, Question } from '@/types';
-import { addDays, diffDays } from '@/lib/date';
+import { addDays } from '@/lib/date';
 
 import { simulationStartDay } from './itemMachine';
 
@@ -13,6 +13,7 @@ export function simulationDays(price: number, bands: SimulationBand[]): number {
 
 /** 시뮬레이션 기간에 속한 날짜 키 목록 */
 export function simulationDayKeys(item: Item): string[] {
+  if (item.simulation.observationDates) return item.simulation.observationDates;
   const start = simulationStartDay(item);
   return Array.from({ length: item.simulation.durationDays }, (_, i) => addDays(start, i));
 }
@@ -29,7 +30,7 @@ export function pickTodayQuestion(params: {
   emphasize: boolean;
 }): Question | null {
   const { item, questions, answers, today, emphasize } = params;
-  const dayIndex = diffDays(simulationStartDay(item), today);
+  const dayIndex = simulationDayKeys(item).indexOf(today);
   if (dayIndex < 0 || dayIndex >= item.simulation.durationDays) return null;
   if (answers.some((a) => a.itemId === item.id && a.date === today)) return null;
 

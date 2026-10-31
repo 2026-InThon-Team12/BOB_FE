@@ -101,9 +101,12 @@ describe('결정 흐름', () => {
     shiftClock(7);
     const held = decideItem(item.id, 'hold');
     expect(held.status).toBe('simulating');
-    expect(held.simulation).toEqual({ startAt: item.simulation.startAt, durationDays: 14 });
+    expect(held.simulation).toMatchObject({ startAt: item.simulation.startAt, durationDays: 14 });
+    expect(held.simulation.observationDates).not.toContain(getToday());
     expect(Object.values(getState().answers)).toHaveLength(1);
-    // 연장된 기간 안이므로 오늘도 답할 수 있다
+    // 보류 당일은 관찰하지 않고 다음 날부터 다시 질문한다
+    expectCode(() => answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[1].id }), 'invalid_transition');
+    shiftClock(1);
     answerToday({ itemId: item.id, questionId: q.id, optionId: q.options[1].id });
     expect(Object.values(getState().answers)).toHaveLength(2);
     expect(decideItem(item.id, 'buy').status).toBe('bought');

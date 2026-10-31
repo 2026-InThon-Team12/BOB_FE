@@ -2,7 +2,8 @@
 import type { Policy } from '@/config/policy';
 import type { CategoryId, DailyAnswer, Item, Question } from '@/types';
 
-import { predictedUseRate, usageSummary } from './simulation';
+import { simulationEndDay } from './itemMachine';
+import { dateKeyOf } from '@/lib/date';
 
 export type PredictionComparison = {
   /** 시뮬레이션 사용일 ÷ 시뮬레이션 기간 */
@@ -29,11 +30,9 @@ export function predictedVsActual(params: {
   answers: DailyAnswer[];
   policy: Pick<Policy, 'reviewAfterDays'>;
 }): PredictionComparison | null {
-  const { item, questions, answers, policy } = params;
-  if (!item.review) return null;
-  // 시뮬레이션이 끝난 뒤의 결과만 본다 → today를 충분히 뒤로 둔다
-  const summary = usageSummary({ item, questions, answers, today: '9999-12-31' });
-  const predictedRate = predictedUseRate(summary);
+  const { item, policy } = params;
+  if (!item.review || !item.summary?.eligible || item.summary.expectedDays === null || !item.purchase || dateKeyOf(item.purchase.boughtAt) < simulationEndDay(item)) return null;
+  const predictedRate = item.summary.expectedDays / 30;
   const actualRate = Math.min(1, item.review.usedDays / policy.reviewAfterDays);
   return {
     predictedRate,

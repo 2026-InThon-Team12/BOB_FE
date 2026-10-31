@@ -69,6 +69,7 @@ export default function DiscountTrapScreen() {
       edges={['top', 'bottom']}
       header={<ScreenHeader title={copy.trap.title} onBack={() => goBack('/')} backLabel={copy.common.back} />}
     >
+      {trap.validation && <Text tone="warning">{trap.validation}</Text>}
       {/* 1단계: 할인 조건 */}
       <Card padding={4}>
         <Stack gap={3}>
@@ -243,11 +244,11 @@ export default function DiscountTrapScreen() {
       {hasLines &&
         (isTrap ? (
           <Stack gap={2}>
-            <Button label={copy.trap.ctaTrap(check.payNeeded)} size="lg" fullWidth loading={trap.registering} onPress={() => confirm('NEEDED')} />
+            <Button label={copy.trap.ctaTrap(check.payNeeded)} size="lg" fullWidth loading={trap.registering} disabled={!!trap.validation} onPress={() => confirm('NEEDED')} />
             <Button label={copy.trap.ctaAll} variant="ghost" fullWidth disabled={trap.registering} onPress={() => confirm('ALL')} />
           </Stack>
         ) : (
-          <Button label={copy.trap.ctaSmart} size="lg" fullWidth loading={trap.registering} onPress={() => confirm('ALL')} />
+          <Button label={copy.trap.ctaSmart} size="lg" fullWidth loading={trap.registering} disabled={!!trap.validation} onPress={() => confirm('ALL')} />
         ))}
     </Screen>
   );

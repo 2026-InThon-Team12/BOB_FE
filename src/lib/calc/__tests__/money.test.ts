@@ -25,7 +25,7 @@ describe('discountCheck (기능 5, 명세서 4.11 예시)', () => {
   it('함정: 양말을 끄면 23,000원 vs 다 사면 30,000원 → 7,000원 더 씀, 무료배송까지 10,000원', () => {
     const r = discountCheck({ lines: [shirt, socks], rule });
     expect(r).toMatchObject({ verdict: 'trap', payNeeded: 23_000, payAll: 30_000, extra: 7_000 });
-    expect(r.freeShipping).toEqual({ remaining: 10_000, savedByPayingShip: 7_000 });
+    expect(r.freeShipping).toEqual({ remaining: 10_000, savedByPayingShip: 6_000 });
   });
 
   it('똑똑한 묶음: 둘 다 필요하면 할인 없이 33,000원 → 30,000원, 3,000원 아낌', () => {
@@ -91,7 +91,7 @@ describe('가계부 (기능 7)', () => {
 
 describe('목표 (기능 4)', () => {
   it('일평균 저축액: 직접 입력 우선, 없으면 가계부', () => {
-    expect(dailySaving({ budget, override: null, policy })).toBeCloseTo(500_000 / 30);
+    expect(dailySaving({ budget, override: null, policy })).toBeCloseTo(500_000 / 31);
     expect(dailySaving({ budget, override: 10_000, policy })).toBe(10_000);
     expect(dailySaving({ budget: undefined, override: null, policy })).toBeNull();
   });

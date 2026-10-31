@@ -1,89 +1,75 @@
-/**
- * 매일 저녁 체크 알림 (기기 로컬 알림 — 서버 푸시 아님).
- * 웹은 로컬 알림을 지원하지 않아 아무것도 하지 않는다 (홈 배너로 대신).
- */
+/** Expo Go uses dated local reminders; Android builds use native FCM tokens. */
 import { requireOptionalNativeModule } from 'expo';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-
-const REMINDER_ID = 'bob-daily-check';
-const CHANNEL_ID = 'daily-check';
+import { claimDailyNotification, registerPushToken, disablePushToken } from '@/data/notificationBridge';
 
 export const notificationsSupported = Platform.OS !== 'web';
-
-let configured = false;
+const CHANNEL = 'bob_daily';
+const TASK = 'bob-background-push';
+const isGo = Constants.executionEnvironment === 'storeClient';
 type NotificationsModule = typeof import('expo-notifications');
 let notifications: NotificationsModule | null | undefined;
-
-// Optional native modules must not prevent Expo Router from loading the app.
-// Cache the result so an unsupported runtime does not retry on every item update.
-function loadNotifications(): NotificationsModule | null {
+export function loadNotifications(): NotificationsModule|null {
   if (notifications !== undefined) return notifications;
-  // Some Expo Go runtimes omit this dependency of the notifications barrel.
-  // Check before evaluating it: Metro may report import-time exceptions even if caught.
-  if (!requireOptionalNativeModule('ExpoApplication')) {
-    notifications = null;
-    return null;
-  }
+  if (!notificationsSupported || !requireOptionalNativeModule('ExpoApplication')) return notifications = null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Load optional native code only inside this guarded call.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     notifications = require('expo-notifications') as NotificationsModule;
-  } catch {
-    console.warn('[notifications] 이 실행 환경에서는 로컬 알림을 사용할 수 없어요.');
-    notifications = null;
-  }
+    notifications.setNotificationHandler({handleNotification:async notification=> {
+      const allowed = notification.request.content.data?.bob_prechecked === true || await claimDailyNotification(notification.request.content.data?.test === 'true');
+      return {shouldShowBanner:allowed,shouldShowList:allowed,shouldPlaySound:false,shouldSetBadge:false};
+    }});
+  } catch {notifications=null;}
   return notifications;
 }
-
-/** 앱 실행 중에도 알림을 배너로 보여준다 */
-function configure(Notifications: NotificationsModule) {
-  if (configured || !notificationsSupported) return;
-  configured = true;
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+async function handleBackground(data: import('expo-notifications').NotificationTaskPayload) {
+  if ('actionIdentifier' in data) return;
+  const payload = data.data.dataString ? JSON.parse(data.data.dataString) as Record<string,unknown> : data.data;
+  if (payload.client_managed !== 'true') return;
+  if (!await claimDailyNotification(payload.test === 'true')) return;
+  const n = loadNotifications();
+  await n?.scheduleNotificationAsync({identifier:`bob-push-${String(payload.digest_id)}`,content:{title:String(payload.title ?? '오늘의 돌아보기'),body:String(payload.body ?? '오늘 할 일을 확인해 주세요.'),data:{route:'today',bob_prechecked:true}},trigger:null});
+}
+// defineTask must execute at module scope, but never evaluate native background code in Expo Go.
+if (Platform.OS === 'android' && !isGo && requireOptionalNativeModule('ExpoTaskManager')) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const manager = require('expo-task-manager') as typeof import('expo-task-manager');
+  if (!manager.isTaskDefined(TASK)) manager.defineTask<import('expo-notifications').NotificationTaskPayload>(TASK,async ({data,error})=>{
+    if (!error) try {await handleBackground(data);} catch { /* No payloads or tokens in logs. */ }
   });
 }
-
-async function ensurePermission(Notifications: NotificationsModule): Promise<boolean> {
-  const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
-  if (!current.canAskAgain) return false;
-  return (await Notifications.requestPermissionsAsync()).granted;
-}
-
-/**
- * 매일 같은 시각 알림을 켜거나 끈다 (하루 한 번만, 품목 수와 관계없이).
- * @param time HH:mm
- */
-export async function syncDailyReminder(params: {
-  enabled: boolean;
-  time: string;
-  title: string;
-  body: string;
-  channelName: string;
-}): Promise<void> {
-  if (!notificationsSupported) return;
-  const Notifications = loadNotifications();
-  if (!Notifications) return;
-  configure(Notifications);
-  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID).catch(() => {});
-  if (!params.enabled) return;
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: params.channelName,
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
-  }
-  if (!(await ensurePermission(Notifications))) return;
-  const [hour, minute] = params.time.split(':').map(Number);
-  await Notifications.scheduleNotificationAsync({
-    identifier: REMINDER_ID,
-    content: { title: params.title, body: params.body },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL_ID },
+let serial = Promise.resolve();
+export function syncNotifications(dates:string[], onOpen:()=>void): Promise<()=>void> {
+  let cleanup = ()=>{};
+  const operation = serial.then(async()=> {
+    const n = loadNotifications(); if (!n) return;
+    if (Platform.OS === 'android') await n.setNotificationChannelAsync(CHANNEL,{name:'오늘의 돌아보기',importance:n.AndroidImportance.DEFAULT});
+    const permission = await n.getPermissionsAsync();
+    const granted = permission.granted || (permission.canAskAgain && (await n.requestPermissionsAsync()).granted);
+    const pending = await n.getAllScheduledNotificationsAsync();
+    await Promise.all(pending.filter(r=>r.identifier.startsWith('bob-')).map(r=>n.cancelScheduledNotificationAsync(r.identifier)));
+    if (!granted) {if (!isGo) await disablePushToken().catch(()=>{});return;}
+    let remote = false;
+    const subscriptions: {remove:()=>void}[] = [];
+    if (Platform.OS === 'android' && !isGo) {
+      try {
+        await n.registerTaskAsync(TASK);
+        const token = await n.getDevicePushTokenAsync();
+        await registerPushToken(String(token.data)); remote=true;
+        subscriptions.push(n.addPushTokenListener(t=>{void registerPushToken(String(t.data)).catch(()=>{});}));
+      } catch { /* Keep local reminders if native registration is unavailable. */ }
+    }
+    if (!remote) for (const day of dates) {
+      const date = new Date(`${day}T20:00:00+09:00`);
+      if (date.getTime() <= Date.now()) continue;
+      await n.scheduleNotificationAsync({identifier:`bob-reminder-${day}`,content:{title:'오늘의 돌아보기',body:'미응답 질문과 구매 결정을 확인해 주세요.',data:{route:'today'}},trigger:{type:n.SchedulableTriggerInputTypes.DATE,date,channelId:CHANNEL}});
+    }
+    subscriptions.push(n.addNotificationResponseReceivedListener(r=>{if(r.notification.request.content.data?.route==='today') onOpen();}));
+    const last = await n.getLastNotificationResponseAsync();
+    if (last?.notification.request.content.data?.route === 'today') {onOpen();await n.clearLastNotificationResponseAsync();}
+    cleanup = ()=>subscriptions.forEach(s=>s.remove());
   });
+  serial = operation.catch(()=>{});
+  return operation.then(()=>cleanup);
 }

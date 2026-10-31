@@ -86,6 +86,7 @@ export default function ReasonsScreen() {
       }
       footer={
         <Stack gap={2}>
+          {step.validation && <Text tone="warning">{step.validation}</Text>}
           {showTrap && (
             <Text variant="caption" tone="warning" align="center">
               {copy.register.trapNotice(step.trapNames.join(', '))}
@@ -97,6 +98,7 @@ export default function ReasonsScreen() {
             size="lg"
             fullWidth
             loading={step.registering}
+            disabled={!!step.validation}
             onPress={next}
           />
         </Stack>

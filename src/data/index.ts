@@ -15,6 +15,7 @@ export {
   useItem,
   useItemQuestions,
   useItems,
+  useRegistrationItems,
   useLatestBudget,
   useQuestions,
   useSettings,
@@ -50,3 +51,6 @@ export { loadDemoSeed } from './seed';
 
 export { DataError } from './errors';
 export type { DataState } from './schema';
+
+export { loadTodayReflections, saveReflection, reflectionDue, fallbackQuestion, summarizeItem, decideItemRemote, submitReviewRemote } from './actions/reflections';
+export type { ReflectionAnswer, AnswerSpec } from './actions/reflections';

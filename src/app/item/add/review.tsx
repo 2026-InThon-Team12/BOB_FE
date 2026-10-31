@@ -53,6 +53,7 @@ export default function ReviewDraftsScreen() {
           category={row.category}
           imageUri={row.imageUri}
           included={row.included}
+          reviewNote={row.selectionUncertain ? '장바구니 체크 여부를 확실히 읽지 못했어요. 가져올 상품이면 직접 체크해 주세요.' : row.reviewFields?.length ? `확인이 필요한 정보: ${row.reviewFields.map(f=>({name:'상품명',price:'가격',image:'사진',selection:'체크 여부'}[f] ?? f)).join(', ')}. 원본과 비교해 수정해 주세요.` : undefined}
           days={row.days}
           aiPicked={row.aiPicked}
           suggesting={row.suggesting}

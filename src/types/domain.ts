@@ -77,6 +77,15 @@ export type PostPurchaseReview = z.infer<typeof PostPurchaseReviewSchema>;
 
 export const ItemSchema = z.object({
   id: Id,
+  registrationState: z.enum(['pending', 'complete']).optional(),
+  remoteId: Id.optional(),
+  simulationId: Id.optional(),
+  purchaseId: Id.optional(),
+  summary: z.object({
+    text: z.string(), method: z.string(), expectedDays: z.number().nullable(),
+    coverage: z.number(), eligible: z.boolean(), reason: z.string().nullable(),
+    fingerprint: z.string(),
+  }).optional(),
   name: z.string().min(1),
   price: Won,
   imageUri: z.string().optional(),
@@ -96,11 +105,14 @@ export const ItemSchema = z.object({
   createdAt: IsoString,
   simulation: z.object({
     startAt: IsoString,
-    durationDays: z.number().int().positive(),
+    durationDays: z.number().int().nonnegative(),
+    endDate: DateKeySchema.optional(),
+    observationDates: z.array(DateKeySchema).optional(),
   }),
   /** 구매/포기를 결정한 시각 */
   decidedAt: IsoString.optional(),
-  purchase: z.object({ boughtAt: IsoString }).optional(),
+  purchase: z.object({ boughtAt: IsoString, reviewStart: DateKeySchema.optional(), reviewEnd: DateKeySchema.optional() }).optional(),
+  savingGoalId: Id.optional(),
   review: PostPurchaseReviewSchema.optional(),
 });
 export type Item = z.infer<typeof ItemSchema>;
@@ -131,6 +143,12 @@ export const QuestionSchema = z.object({
   /** normal: 기본 질문, recheck: 과대예측 경향이 큰 분야에서 쓰는 강한 재질문 */
   variant: z.enum(['normal', 'recheck']),
   options: z.array(QuestionOptionSchema).min(2),
+  date: DateKeySchema.optional(),
+  phase: z.enum(['pre', 'post']).optional(),
+  templateCode: z.string().optional(),
+  answerSpec: z.record(z.string(), z.unknown()).optional(),
+  reference: z.string().nullish(),
+  generationMethod: z.string().optional(),
 });
 export type Question = z.infer<typeof QuestionSchema>;
 
@@ -147,6 +165,11 @@ export const DailyAnswerSchema = z.object({
   date: DateKeySchema,
   questionId: Id,
   optionId: Id,
+  value: z.object({
+    choice_code: z.string().optional(), number_value: z.number().optional(),
+    text_value: z.string().optional(), object_value: z.record(z.string(), z.string()).optional(),
+  }).optional(),
+  label: z.string().optional(),
   at: IsoString,
 });
 export type DailyAnswer = z.infer<typeof DailyAnswerSchema>;
@@ -165,11 +188,15 @@ export const GoalSchema = z.object({
   achievedAt: IsoString.optional(),
   /** 목표를 바꿀 때 이전 목표에서 옮겨 온 참은 금액 (명세서 4.8-1) */
   carriedAmount: Won.optional(),
+  closedAt: IsoString.optional(),
+  // Origin-linked allocations allow cancellation to follow transfers across goals.
+  allocations: z.array(z.object({ sourceId: Id, amount: Won })).optional(),
 });
 export type Goal = z.infer<typeof GoalSchema>;
 
 export const ImpulseEventSchema = z.object({
   id: Id,
+  cancelledAt: IsoString.optional(),
   /** 기록 당시 활성 목표 (목표가 없으면 비어 있음) */
   goalId: Id.optional(),
   label: z.string().min(1),
@@ -257,6 +284,8 @@ export const ItemDraftSchema = z.object({
   categoryConfidence: z.number().min(0).max(1).optional(),
   source: ItemSourceSchema,
   sourceUrl: z.string().optional(),
+  reviewFields: z.array(z.string()).optional(),
+  selectionUncertain: z.boolean().optional(),
 });
 export type ItemDraft = z.infer<typeof ItemDraftSchema>;
 

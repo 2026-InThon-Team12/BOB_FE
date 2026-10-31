@@ -10,6 +10,7 @@ type Props = {
   category: CategoryId | null;
   imageUri?: string;
   included: boolean;
+  reviewNote?: string;
   /** 가격으로 정한 시뮬레이션 기간 */
   days: number | null;
   aiPicked: boolean;
@@ -33,6 +34,7 @@ export function DraftRowCard(p: Props) {
   return (
     <Card padding={4}>
       <Stack gap={3}>
+        {p.reviewNote && <Text tone="warning">{p.reviewNote}</Text>}
         <Row gap={3}>
           <Checkbox
             checked={p.included}

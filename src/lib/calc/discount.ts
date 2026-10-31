@@ -71,7 +71,7 @@ export function discountCheck(params: { lines: CartLine[]; rule: DiscountRule })
     extra: Math.max(0, extra),
     saved: Math.max(0, noDiscountPay - payAll),
     noDiscountPay,
-    freeShipping: remaining > 0 ? { remaining, savedByPayingShip: remaining - rule.shipFee } : null,
+    freeShipping: remaining > 0 ? { remaining, savedByPayingShip: Math.max(0, payAmount(rule.freeShipMin, rule) - payAll) } : null,
     freeShippingMet: rule.freeShipOn && total >= rule.freeShipMin,
     breakdown: {
       needed: costBreakdown(neededTotal, rule, true),

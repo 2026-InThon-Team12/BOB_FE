@@ -22,6 +22,8 @@ export type DraftRow = {
   sourceUrl?: string;
   /** 체크 해제하면 등록하지 않는다 */
   included: boolean;
+  reviewFields?: string[];
+  selectionUncertain?: boolean;
 };
 
 export const draftFromAi = (d: ItemDraft): DraftRow => ({
@@ -34,7 +36,9 @@ export const draftFromAi = (d: ItemDraft): DraftRow => ({
   imageUri: d.imageUri,
   source: d.source,
   sourceUrl: d.sourceUrl,
-  included: true,
+  included: !d.selectionUncertain,
+  reviewFields:d.reviewFields,
+  selectionUncertain:d.selectionUncertain,
 });
 
 export const emptyDraft = (source: ItemSource = 'manual'): DraftRow => ({

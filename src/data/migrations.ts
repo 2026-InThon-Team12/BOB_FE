@@ -7,7 +7,9 @@
  *   3. __tests__/migrations.test.ts에 이전 버전 샘플을 추가한다.
  */
 
-export const CURRENT_VERSION = 2;
+import { GoalSchema, ImpulseEventSchema, ItemSchema } from '@/types';
+
+export const CURRENT_VERSION = 3;
 
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
 
@@ -15,6 +17,38 @@ type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
 const MIGRATIONS: Record<number, Migration> = {
   // Goal.productUrl은 선택 필드라 기존 목표 데이터는 그대로 유효하다.
   1: (s) => s,
+  // New fields are optional. Preserve old answers and balances; old records without
+  // a valid forecast are intentionally excluded from prediction comparisons.
+  2: (s) => {
+    if (!s.goals || !s.impulses || !s.items) return s;
+    const goals = Object.values(s.goals as Record<string,unknown>).map(g=>GoalSchema.safeParse(g));
+    const impulses = Object.values(s.impulses as Record<string,unknown>).map(e=>ImpulseEventSchema.safeParse(e));
+    const items = Object.values(s.items as Record<string,unknown>).map(i=>ItemSchema.safeParse(i));
+    if (goals.some(g=>!g.success) || impulses.some(e=>!e.success) || items.some(i=>!i.success)) return s;
+    const ordered = goals.flatMap(g=>g.success ? [g.data]:[]).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
+    for (let index=0;index<ordered.length;index++) {
+      const goal=ordered[index], next=ordered[index+1];
+      const end=goal.closedAt ?? next?.createdAt;
+      const own = [
+        ...impulses.flatMap(e=>e.success && e.data.goalId===goal.id && e.data.decision==='resisted' ? [{sourceId:`impulse:${e.data.id}`,amount:e.data.amount}]:[]),
+        ...items.flatMap(i=>i.success && i.data.status==='abandoned' && i.data.decidedAt && i.data.decidedAt>=goal.createdAt && (!end || i.data.decidedAt<end) && (!goal.achievedAt || i.data.decidedAt<=goal.achievedAt) ? [{sourceId:`item:${i.data.id}`,amount:i.data.price}]:[]),
+      ];
+      const previous=ordered[index-1];
+      const transferred: {sourceId:string;amount:number}[]=[];
+      let remaining=goal.carriedAmount ?? 0;
+      if (previous?.allocations && !previous.achievedAt) previous.allocations=previous.allocations.map(row=>{
+        const amount=Math.min(remaining,row.amount);remaining-=amount;
+        if(amount)transferred.push({...row,amount});
+        return {...row,amount:row.amount-amount};
+      }).filter(row=>row.amount>0);
+      // Preserve legacy balances with no recoverable origin; do not invent a new event.
+      if(remaining && !previous?.achievedAt)transferred.push({sourceId:`legacy:${goal.id}`,amount:remaining});
+      goal.allocations=[...transferred,...own];
+      goal.carriedAmount=undefined;
+      if(!goal.isActive)goal.closedAt=end ?? goal.achievedAt ?? goal.createdAt;
+    }
+    return {...s,goals:Object.fromEntries(ordered.map(g=>[g.id,g]))};
+  },
 };
 
 export class MigrationError extends Error {}

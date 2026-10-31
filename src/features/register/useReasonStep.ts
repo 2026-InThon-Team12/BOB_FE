@@ -1,3 +1,4 @@
+import { reflectionCopy } from '@/constants/copy';
 /**
  * 등록한 물품마다 구매 이유 고르기 (기능 6, 명세서 4.4) + 자유 소비 잔액 리마인드 (기능 7)
  * - 할인·한정 판매 → 마감일, 기타 → 직접 입력
@@ -6,7 +7,7 @@
 import { useMemo, useState } from 'react';
 
 import { policy } from '@/config/policy';
-import { registerAfterReasons, updateItem, useBudget, useExpenses, useItem, useItems, useThisMonth, useToday } from '@/data';
+import { registerAfterReasons, updateItem, useBudget, useExpenses, useItem, useRegistrationItems, useThisMonth, useToday } from '@/data';
 import { bucketForCategory, remainingBudget } from '@/lib/calc';
 import type { ReasonId } from '@/types';
 
@@ -23,7 +24,7 @@ export function useReasonStep() {
 
   const id = createdIds[index];
   const item = useItem(id);
-  const allItems = useItems();
+  const allItems = useRegistrationItems();
   const budget = useBudget(useThisMonth());
   const expenses = useExpenses();
 
@@ -43,6 +44,11 @@ export function useReasonStep() {
     };
   };
   const draft = draftOf(id);
+  const validation = !draft.reasons.length ? reflectionCopy.reasonRequired
+    : draft.reasons.includes('other') && (!draft.otherText.trim() || draft.otherText.trim().length > 300)
+      ? reflectionCopy.otherRequired
+      : draft.reasons.includes('discount_limited') && (!draft.saleEndsAt || draft.saleEndsAt < today)
+        ? reflectionCopy.deadlineRequired : null;
   const patch = (p: Partial<Draft>) => id && setDrafts((d) => ({ ...d, [id]: { ...draftOf(id), ...p } }));
 
   const isLast = index >= createdIds.length - 1;
@@ -63,6 +69,7 @@ export function useReasonStep() {
   };
 
   return {
+    validation,
     item,
     position: { current: index + 1, total: createdIds.length },
     reasons: draft.reasons,
@@ -84,6 +91,7 @@ export function useReasonStep() {
     /** 현재 품목 저장 후 다음 품목으로. 마지막이면 'done' */
     registering,
     next: async (): Promise<'next' | 'done' | 'discount' | 'failed'> => {
+      if (validation || registering) return 'failed';
       const saved = save();
       if (!saved) return 'failed';
       if (isLast) {
@@ -94,8 +102,7 @@ export function useReasonStep() {
         setRegistering(true);
         try {
           return await registerAfterReasons(confirmed, registrationKey);
-        } catch (error) {
-          console.warn('[register] items/batch 실패', error);
+        } catch {
           return 'failed';
         } finally {
           setRegistering(false);

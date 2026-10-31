@@ -23,9 +23,9 @@ export type DecisionAction = Exclude<ItemAction, 'review'>;
 /** 시뮬레이션 첫날 (로컬 날짜 키) */
 export const simulationStartDay = (item: Item) => dateKeyOf(item.simulation.startAt);
 /** 시뮬레이션 마지막 날 다음 날 = 결정 가능일 */
-export const simulationEndDay = (item: Item) => addDays(simulationStartDay(item), item.simulation.durationDays);
+export const simulationEndDay = (item: Item) => item.simulation.endDate ?? addDays(simulationStartDay(item), item.simulation.durationDays);
 /** 오늘이 시뮬레이션 며칠째인지 (첫날 1) */
-export const simulationDayNumber = (item: Item, today: string) => diffDays(simulationStartDay(item), today) + 1;
+export const simulationDayNumber = (item: Item, today: string) => item.simulation.observationDates ? item.simulation.observationDates.filter(day => day <= today).length : diffDays(simulationStartDay(item), today) + 1;
 /** 결정 가능일까지 남은 일수 (오늘 포함하지 않음, 0이면 결과 도착) */
 export const daysLeft = (item: Item, today: string) => Math.max(0, diffDays(today, simulationEndDay(item)));
 /** 구매 후 점검 가능일 */

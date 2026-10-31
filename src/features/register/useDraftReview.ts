@@ -84,10 +84,7 @@ export function useDraftReview() {
               .classifyCategory({ name: r.name.trim(), price: r.price ?? undefined })
               .then((g) => g.category)
               .catch((): CategoryId => 'etc'));
-          // AI 맞춤 질문 (실패하면 카테고리 기본 템플릿)
-          const questionTemplates = await ai
-            .personalizeQuestions({ name: r.name.trim(), price: r.price!, category, reasons: [] })
-            .catch(() => undefined);
+          // 맞춤 질문은 관찰 당일에 생성하고 로컬에 고정한다.
           return {
             name: r.name,
             price: r.price!,
@@ -97,11 +94,10 @@ export function useDraftReview() {
             reasons: [],
             source: r.source,
             sourceUrl: r.sourceUrl,
-            questionTemplates,
           };
         }),
       );
-      const created = addItems(inputs);
+      const created = addItems(inputs, true);
       flow.setCreatedIds(created.map((i) => i.id));
       return created.length;
     } finally {

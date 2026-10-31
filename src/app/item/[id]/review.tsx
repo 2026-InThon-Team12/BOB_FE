@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { BarRow, BucketOption, ItemSummary } from '@/components/feature';
 import { Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, TextLink } from '@/components/ui';
 import { CATEGORY_LABELS } from '@/constants/categories';
-import { copy } from '@/constants/copy';
+import { copy, reflectionCopy } from '@/constants/copy';
 import { useReview } from '@/features/review/useReview';
 import { goBack } from '@/lib/navigation';
 import { makeStyles } from '@/theme';
@@ -44,6 +44,11 @@ export default function PostCheckScreen() {
         extra={copy.review.sinceBought(view.daysSinceBought)}
       />
 
+      <Button label={reflectionCopy.postAction} variant="secondary" onPress={()=>router.push('/check')}/>
+      {item.purchase?.reviewStart && <Text tone="secondary">{reflectionCopy.window(item.purchase.reviewStart,item.purchase.reviewEnd)}</Text>}
+      {review.error && <Text tone="warning">{review.error}</Text>}
+      {review.saving && <Text>{reflectionCopy.saving}</Text>}
+      {review.saved && !view.eligible && <Text>{reflectionCopy.reviewInsufficient}</Text>}
       {!due ? (
         <Card tone="subtle">
           <Text variant="label" tone="secondary">

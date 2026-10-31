@@ -1,3 +1,4 @@
+import { reflectionCopy } from '@/constants/copy';
 /**
  * 할인 함정 확인 (기능 5, 명세서 4.11)
  * - 등록 흐름에서 오면 같은 묶음(batch)의 물건으로, 등록 방법의 바로가기로 오면 직접 담아서 계산한다.
@@ -6,14 +7,14 @@
 import { useMemo, useRef, useState } from 'react';
 
 import { policy } from '@/config/policy';
-import { completeDiscountRegistration, useItems } from '@/data';
+import { completeDiscountRegistration, useRegistrationItems } from '@/data';
 import { discountCheck } from '@/lib/calc';
 import { createId } from '@/lib/id';
 import type { DiscountRule } from '@/types';
 
 export type TrapLine = {
   key: string;
-  /** 등록한 물건이면 그 id (필요 없다고 끄고 확정하면 Bye 처리) */
+  /** 등록한 물건이면 그 id (끄고 확정하면 미등록 초안 제거) */
   itemId?: string;
   name: string;
   price: number;
@@ -23,7 +24,7 @@ export type TrapLine = {
 };
 
 export function useDiscountTrap(batchId: string | undefined, registrationKey?: string) {
-  const items = useItems();
+  const items = useRegistrationItems();
   const [registering, setRegistering] = useState(false);
   const inFlight = useRef(false);
   const batchLines = useMemo<TrapLine[]>(
@@ -71,7 +72,9 @@ export function useDiscountTrap(batchId: string | undefined, registrationKey?: s
   };
   const check = discountCheck({ lines: lines.map((l) => ({ name: l.name, price: l.price, planned: isOn(l) })), rule });
 
+  const validation = minAmount === null || minAmount < 0 || value === null || value < 0 || (unit === 'pct' && value > 100) || fee === null || fee < 0 || (freeShipOn && (freeMin === null || freeMin <= 0)) ? reflectionCopy.discountInvalid : null;
   return {
+    validation,
     registering,
     fromBatch: !!batchId,
     lines: lines.map((l) => ({ ...l, on: isOn(l) })),
@@ -101,9 +104,9 @@ export function useDiscountTrap(batchId: string | undefined, registrationKey?: s
     addManualLine: (name: string, price: number) =>
       setManualLines((ls) => [...ls, { key: createId('ln_'), name, price, addedForDiscount: false }]),
     removeManualLine: (key: string) => setManualLines((ls) => ls.filter((l) => l.key !== key)),
-    /** Register reviewed conditions before applying local Bye decisions. */
+    /** Register reviewed conditions before removing excluded drafts. */
     confirm: async (decision: 'NEEDED' | 'ALL'): Promise<number | null> => {
-      if (inFlight.current) return null;
+      if (inFlight.current || validation) return null;
       inFlight.current = true;
       setRegistering(true);
       try {

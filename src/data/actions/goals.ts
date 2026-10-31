@@ -1,4 +1,6 @@
 /** 목표 (기능 4). 활성 목표는 항상 하나 */
+import { policy } from '@/config/policy';
+import { goalCredits, goalProgress } from '@/lib/calc/goal';
 import { createId } from '@/lib/id';
 import type { Goal } from '@/types';
 
@@ -19,7 +21,18 @@ const validate = (name: string | undefined, price: number | undefined) => {
 /** 새 목표를 만들고 활성 목표로 지정한다 */
 export function createGoal(input: { name: string; price: number; imageUri?: string; productUrl?: string; carriedAmount?: number }): Goal {
   validate(input.name, input.price);
-  const carried = Math.max(0, Math.min(input.price, Math.round(input.carriedAmount ?? 0)));
+  const state = getState();
+  const previous = Object.values(state.goals).find(g => g.isActive);
+  const credits = previous ? goalCredits(previous, Object.values(state.impulses), Object.values(state.items), policy.abandonCountsAsResisted) : [];
+  let remaining = previous?.achievedAt ? 0 : Math.max(0, Math.min(input.price, Math.round(input.carriedAmount ?? 0)));
+  const moved: {sourceId: string; amount: number}[] = [];
+  const retained = credits.map(row => {
+    const amount = Math.min(row.amount, remaining);
+    remaining -= amount;
+    if (amount) moved.push({...row, amount});
+    return {...row, amount: row.amount - amount};
+  }).filter(row => row.amount > 0);
+  const carried = moved.reduce((sum, row) => sum + row.amount, 0);
   const goal: Goal = {
     id: createId('gl_'),
     name: input.name.trim(),
@@ -27,10 +40,12 @@ export function createGoal(input: { name: string; price: number; imageUri?: stri
     imageUri: input.imageUri,
     productUrl: input.productUrl?.trim() || undefined,
     isActive: true,
+    allocations: moved,
+    ...(carried >= input.price ? {achievedAt: getNowIso()} : {}),
     createdAt: getNowIso(),
     ...(carried > 0 ? { carriedAmount: carried } : {}),
   };
-  update((s) => ({ goals: { ...deactivateAll(s.goals), [goal.id]: goal } }));
+  update((s) => ({ goals: { ...deactivateAll(s.goals), ...(previous ? {[previous.id]: {...previous, isActive: false, closedAt: getNowIso(), allocations: retained, carriedAmount: undefined}} : {}), [goal.id]: goal } }));
   return goal;
 }
 
@@ -45,7 +60,8 @@ export function updateGoal(id: string, patch: Partial<Pick<Goal, 'name' | 'price
     ...(patch.productUrl !== undefined ? { productUrl: patch.productUrl.trim() || undefined } : {}),
   };
   update((s) => ({ goals: { ...s.goals, [id]: next } }));
-  return next;
+  refreshGoalAchievements();
+  return getState().goals[id];
 }
 
 export function setActiveGoal(id: string): void {
@@ -66,4 +82,9 @@ export function deleteGoal(id: string): void {
     const { [id]: _removed, ...goals } = s.goals;
     return { goals };
   });
+}
+
+export function refreshGoalAchievements(): void {
+  const s = getState();
+  for (const goal of Object.values(s.goals)) if (goal.isActive && !goal.achievedAt && goalProgress({goal, impulses: Object.values(s.impulses), items: Object.values(s.items), policy}).achieved) markGoalAchieved(goal.id);
 }

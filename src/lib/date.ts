@@ -6,8 +6,8 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 const pad = (n: number) => String(n).padStart(2, '0');
 
-export const toDateKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-export const toMonthKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+export const toDateKey = (d: Date) => { const seoul = new Date(d.getTime() + 9 * 60 * 60 * 1000); return `${seoul.getUTCFullYear()}-${pad(seoul.getUTCMonth()+1)}-${pad(seoul.getUTCDate())}`; };
+export const toMonthKey = (d: Date) => toDateKey(d).slice(0,7);
 
 /** ISO 타임스탬프 → 로컬 날짜 키 */
 export const dateKeyOf = (iso: string) => toDateKey(new Date(iso));

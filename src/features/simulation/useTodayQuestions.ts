@@ -3,13 +3,11 @@ import { useMemo } from 'react';
 
 import { policy } from '@/config/policy';
 import { CATEGORY_LABELS } from '@/constants/categories';
-import { useAnswers, useItems, useQuestions, useToday } from '@/data';
+import { useAnswers, useItems, useQuestions, useToday, reflectionDue, fallbackQuestion } from '@/data';
 import {
   categoryTendency,
   derivePhase,
-  pickTodayQuestion,
   questionText,
-  shouldEmphasize,
   simulationDayNumber,
 } from '@/lib/calc';
 import type { Item, Question } from '@/types';
@@ -41,11 +39,11 @@ export function useTodayQuestions() {
     for (const item of [...items].reverse()) {
       const phase = derivePhase(item, today, policy);
       if (phase === 'awaitingDecision') awaitingDecision.push(item);
-      if (phase !== 'simulating') continue;
-
+      if (!reflectionDue(item, today)) continue;
       const itemQuestions = questions.filter((q) => q.itemId === item.id);
-      const emphasize = shouldEmphasize(item.category, tendencies, policy.emphasis);
-      const question = pickTodayQuestion({ item, questions: itemQuestions, answers, today, emphasize });
+      const daily = itemQuestions.find(q => q.date === today && q.phase === (item.status === 'bought' ? 'post' : 'pre'));
+      const answered = answers.some(a => a.itemId === item.id && a.date === today && (questions.find(q => q.id === a.questionId)?.phase ?? 'pre') === (item.status === 'bought' ? 'post':'pre'));
+      const question = answered ? null : daily ?? fallbackQuestion(item,today);
       if (!question) continue;
 
       const t = tendencies.find((x) => x.category === item.category);
@@ -56,7 +54,7 @@ export function useTodayQuestions() {
         categoryLabel: CATEGORY_LABELS[item.category],
         day: simulationDayNumber(item, today),
         totalDays: item.simulation.durationDays,
-        emphasis: emphasize && t ? { ratio: t.ratio } : null,
+        emphasis: t && t.samples >= policy.emphasis.minSamples && t.ratio >= policy.emphasis.overPredictionRatio ? {ratio:t.ratio} : null,
       });
     }
     return { entries, awaitingDecision };

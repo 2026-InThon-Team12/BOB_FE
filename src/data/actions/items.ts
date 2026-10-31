@@ -1,4 +1,5 @@
 /** 물품 등록·결정·점검 (기능 1·2·3·6) */
+import { refreshGoalAchievements } from './goals';
 import { policy } from '@/config/policy';
 import { defaultQuestionTemplates } from '@/constants/questionTemplates';
 import {
@@ -10,6 +11,8 @@ import {
   simulationDays,
   type DecisionAction,
 } from '@/lib/calc';
+import { addDays, diffDays } from '@/lib/date';
+import { simulationDayKeys } from '@/lib/calc/simulation';
 import { createId } from '@/lib/id';
 import type { CategoryId, ConfirmedItemInput, Expense, Item, Question, ReasonId } from '@/types';
 
@@ -34,7 +37,7 @@ const omitKeys = <T>(record: Record<string, T>, drop: (v: T) => boolean) =>
   Object.fromEntries(Object.entries(record).filter(([, v]) => !drop(v)));
 
 /** 확인을 마친 물품들을 등록하고 시뮬레이션을 시작한다 */
-export function addItems(inputs: ConfirmedItemInput[]): Item[] {
+export function addItems(inputs: ConfirmedItemInput[], pending = false): Item[] {
   const now = getNowIso();
   // 한 번에 등록한 물건은 같은 쇼핑몰 묶음 (할인 함정 확인에서 함께 본다)
   const batchId = inputs[0]?.batchId ?? createId('bt_');
@@ -50,6 +53,7 @@ export function addItems(inputs: ConfirmedItemInput[]): Item[] {
     const fallback = defaultQuestionTemplates(input.category);
     created.push({
       id,
+      registrationState: pending ? 'pending' : 'complete',
       name: input.name.trim(),
       price: input.price,
       imageUri: input.imageUri,
@@ -122,7 +126,7 @@ export function decideItem(id: string, action: DecisionAction): Item {
   assertCan(item, action);
   const now = getNowIso();
 
-  let next: Item = { ...item, status: NEXT_STATUS[action], decidedAt: now };
+  let next: Item = { ...item, status: NEXT_STATUS[action], decidedAt: now, ...(action === 'abandon' ? {savingGoalId: Object.values(getState().goals).find(g => g.isActive)?.id} : {}) };
   let expense: Expense | null = null;
 
   if (action === 'buy') {
@@ -138,11 +142,15 @@ export function decideItem(id: string, action: DecisionAction): Item {
     };
   }
   if (action === 'hold') {
-    // 지금까지의 답은 그대로 두고 기간만 늘린다 ("조금 더 지켜볼게요 · 7일 보류")
+    const today = getToday();
+    const extension = Math.min(policy.holdDays, item.saleEndsAt ? diffDays(today, item.saleEndsAt) : Infinity);
+    if (extension <= 0) throw new DataError('판매 마감일이 지나 보류할 수 없어요.', 'invalid_transition');
+    const dates = [...simulationDayKeys(item), ...Array.from({length: extension}, (_, i) => addDays(today, i + 1))];
     next = {
       ...next,
       decidedAt: undefined,
-      simulation: { ...item.simulation, durationDays: item.simulation.durationDays + policy.holdDays },
+      simulation: { ...item.simulation, durationDays: dates.length, observationDates: dates, endDate: addDays(today, extension + 1) },
+      summary: undefined,
     };
   }
 
@@ -150,6 +158,7 @@ export function decideItem(id: string, action: DecisionAction): Item {
     items: { ...s.items, [id]: next },
     ...(expense ? { expenses: { ...s.expenses, [expense.id]: expense } } : {}),
   }));
+  refreshGoalAchievements();
   return next;
 }
 

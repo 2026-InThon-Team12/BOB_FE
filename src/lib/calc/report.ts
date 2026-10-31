@@ -49,7 +49,7 @@ export function monthlySummary(params: { items: Item[]; impulses: ImpulseEvent[]
   const { items, impulses, month } = params;
   const inMonth = (iso: string | undefined) => !!iso && monthKeyOf(iso) === month;
   const byes = items.filter((i) => i.status === 'abandoned' && inMonth(i.decidedAt));
-  const resisted = impulses.filter((e) => e.decision === 'resisted' && inMonth(e.at));
+  const resisted = impulses.filter((e) => e.decision === 'resisted' && !e.cancelledAt && inMonth(e.at));
   return {
     registered: items.filter((i) => inMonth(i.createdAt)).length,
     byeCount: byes.length,

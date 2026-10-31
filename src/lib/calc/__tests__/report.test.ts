@@ -13,6 +13,7 @@ import { isoAt, makeAnswers, makeItem, makeQuestions } from '@/test/factories';
 describe('predictedVsActual (기능 2)', () => {
   it('예측 비율 ÷ 실제 비율', () => {
     const item = makeItem({
+      summary:{text:'예측',method:'AI',expectedDays:30,coverage:1,eligible:true,reason:null,fingerprint:'test'},
       start: '2026-10-01',
       duration: 7,
       status: 'bought',

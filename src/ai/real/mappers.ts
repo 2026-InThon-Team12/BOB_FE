@@ -57,6 +57,7 @@ function parse<T>(schema: z.ZodType<T>, data: unknown, what: string): T {
 
 const DraftDto = z.object({
   name: z.string(),
+  review_fields: z.array(z.string()).optional(),
   price: Price,
   category: z.string().optional(),
   supplemental_question: z.string().optional(),
@@ -73,6 +74,7 @@ const DraftDto = z.object({
 
 const DraftAnalysisDto = z.object({
   items: z.array(DraftDto).optional().default([]),
+  review_items: z.array(DraftDto).optional().default([]),
   warnings: z.array(z.string()).optional().default([]),
   analysis_method: z.enum(['text', 'vision', 'ocr', 'manual']),
 });
@@ -105,7 +107,8 @@ const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sou
   imageUri: dto.image_url ?? dto.imageUrl ?? cropImageUri(dto.image_crop),
   category: toCategory(dto.category),
   // OpenAPI에는 confidence가 없으므로, AI 추천 표시를 위한 중립값을 사용한다.
-  categoryConfidence: toCategory(dto.category) ? (dto.confidence ?? 0.5) : undefined,
+  categoryConfidence: dto.category_source === 'FALLBACK' ? undefined : toCategory(dto.category) ? (dto.confidence ?? 0.5) : undefined,
+  reviewFields: dto.review_fields,
   source,
   sourceUrl: dto.source_url ?? sourceUrl,
 });
@@ -113,7 +116,7 @@ const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sou
 export function mapCartScreenshot(data: unknown): CartScreenshotAnalysis {
   const result = parse(DraftAnalysisDto, data, '스크린샷 인식');
   return {
-    items: result.items.filter((d) => d.name.trim()).map((d) => toDraft(d, 'screenshot')),
+    items: [...result.items.map(d => toDraft(d, 'screenshot')), ...result.review_items.map(d => ({...toDraft(d, 'screenshot'), selectionUncertain:true}))],
     warnings: result.warnings,
     analysisMethod: result.analysis_method,
   };

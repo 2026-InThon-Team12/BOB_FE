@@ -1,30 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { View } from 'react-native';
 
-import { DayGrid, ItemSummary } from '@/components/feature';
+import { ItemSummary } from '@/components/feature';
 import { Button, Card, EmptyState, Icon, Row, Screen, ScreenHeader, Stack, Text, useToast } from '@/components/ui';
-import { copy } from '@/constants/copy';
+import { copy, reflectionCopy } from '@/constants/copy';
 import { REASON_TOPICS } from '@/constants/reasons';
 import { policy } from '@/config/policy';
 import { useSimulationResult } from '@/features/simulation/useSimulationResult';
-import { formatWon } from '@/lib/format';
 import { goBack } from '@/lib/navigation';
-import { makeStyles } from '@/theme';
-
-const useStyles = makeStyles((t) => ({
-  divider: { height: 1, backgroundColor: t.color.border.default },
-}));
 
 /** 시뮬레이션 결과 + Buy · Bye · 7일 보류 (기능 1) */
 export default function ResultScreen() {
-  const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { view, decide } = useSimulationResult(id);
+  const { view, decide, busy, error, summaryLoading, refresh } = useSimulationResult(id);
   const toast = useToast();
 
   /** 명세서 3장: Buy ▶ 홈 (2주 뒤 점검 예약) · Bye ▶ 목표 (참은 금액 누적) · 보류 ▶ 홈 */
-  const onDecide = (action: 'buy' | 'abandon' | 'hold') => {
-    const out = decide(action);
+  const onDecide = async (action: 'buy' | 'abandon' | 'hold') => {
+    const out = await decide(action);
     if (!out) return;
     if (out.action === 'buy') {
       toast(copy.result.boughtToast(out.reviewAfterDays));
@@ -60,51 +52,17 @@ export default function ResultScreen() {
         extra={firstReason ? copy.result.registeredFor(REASON_TOPICS[firstReason]) : undefined}
       />
 
-      <Card>
-        <Stack gap={4}>
-          <Row gap={2} align="baseline">
-            <Text tone="secondary">{copy.result.neededPrefix(view.totalDays)}</Text>
-            <Text variant="hero" tone="brand">
-              {copy.result.neededDays(view.usedDays)}
-            </Text>
-            <Text tone="secondary">{copy.result.neededSuffix}</Text>
-          </Row>
-          <DayGrid states={view.cells.map((c) => c.state)} counts={view.counts} />
-          <View style={styles.divider} />
-          <Row justify="space-between">
-            <Text tone="secondary">{copy.result.perUse}</Text>
-            {view.costPerUse !== null ? (
-              <Text variant="title">{formatWon(view.costPerUse)}</Text>
-            ) : (
-              <Text variant="bodyStrong">{copy.result.neverNeeded}</Text>
-            )}
-          </Row>
-        </Stack>
-      </Card>
-
-      {view.notes.length > 0 && (
-        <Card>
-          <Stack gap={2}>
-            <Row gap={1}>
-              <Icon name="ai" size="sm" tone="brand" />
-              <Text variant="label" weight="600" tone="brand">
-                {copy.result.summaryTitle}
-              </Text>
-            </Row>
-            {view.notes.map((note) => (
-              <Text key={note.kind}>
-                {note.kind === 'frontLoaded' || note.kind === 'backLoaded'
-                  ? copy.result.summary[note.kind](note.days)
-                  : note.kind === 'mostlyUnsure' || note.kind === 'missed'
-                    ? copy.result.summary[note.kind](note.count)
-                    : note.kind === 'mixed'
-                      ? copy.result.summary.mixed(note.yes, note.no)
-                      : copy.result.summary[note.kind]()}
-              </Text>
-            ))}
-          </Stack>
-        </Card>
-      )}
+      <Card><Stack gap={3}>
+        <Text variant="heading">{reflectionCopy.summaryTitle}</Text>
+        {summaryLoading && <Text>{reflectionCopy.summaryLoading}</Text>}
+        {error && <><Text tone="warning">{error}</Text><Button label={reflectionCopy.retry} onPress={refresh}/></>}
+        {item.summary ? <>
+          <Text>{item.summary.text}</Text>
+          <Text tone="secondary">{item.summary.method === 'AI' ? reflectionCopy.aiSummary : reflectionCopy.fallbackSummary} · {reflectionCopy.coverage(item.summary.coverage)}</Text>
+          {item.summary.expectedDays !== null && <Text>{reflectionCopy.expected(item.summary.expectedDays)}</Text>}
+          {!item.summary.eligible && <Text tone="secondary">{reflectionCopy.insufficient}</Text>}
+        </> : !summaryLoading && <Text>{reflectionCopy.unfinished}</Text>}
+      </Stack></Card>
 
       {view.warning && (
         <Card tone="warning">
@@ -127,19 +85,19 @@ export default function ResultScreen() {
           )}
           <Row gap={3}>
             <Stack flex={1}>
-              <Button label={copy.decision.buy} sublabel={copy.decision.buySub} onPress={() => onDecide('buy')} />
+              <Button label={copy.decision.buy} sublabel={copy.decision.buySub} disabled={busy || summaryLoading} onPress={() => onDecide('buy')} />
             </Stack>
             <Stack flex={1}>
               <Button
                 label={copy.decision.bye}
                 sublabel={copy.decision.byeSub}
                 variant="bye"
-                onPress={() => onDecide('abandon')}
+                disabled={busy || summaryLoading || view.phase !== 'awaitingDecision'} onPress={() => onDecide('abandon')}
               />
             </Stack>
           </Row>
-          {view.phase === 'awaitingDecision' && (
-            <Button label={copy.decision.hold(policy.holdDays)} variant="ghost" onPress={() => onDecide('hold')} />
+          {view.phase === 'awaitingDecision' && view.canHold && (
+            <Button label={copy.decision.hold(policy.holdDays)} variant="ghost" disabled={busy || summaryLoading} onPress={() => onDecide('hold')} />
           )}
         </Stack>
       ) : null}

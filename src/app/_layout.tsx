@@ -20,6 +20,8 @@ import { ThemeProvider, useTheme } from '@/theme';
 // 시안 글꼴: IBM Plex Sans KR. 글꼴을 바꾸면 여기와 theme/tokens.ts의 font.family를 함께 고친다.
 const FONTS = { IBMPlexSansKR_400Regular, IBMPlexSansKR_500Medium, IBMPlexSansKR_600SemiBold, IBMPlexSansKR_700Bold };
 
+function NotificationSync() {useReminderSync();return null;}
+
 function RootNavigator() {
   const theme = useTheme();
   const hydrated = useHydrated();
@@ -50,6 +52,7 @@ function RootNavigator() {
           <Stack.Screen name="dev" />
         </Stack>
       )}
+      {ready && <NotificationSync />}
       </ToastProvider>
     </PhoneFrame>
   );
@@ -57,7 +60,6 @@ function RootNavigator() {
 
 function ThemedApp() {
   const { themeScheme } = useSettings();
-  useReminderSync();
   return (
     <ThemeProvider scheme={themeScheme ?? undefined}>
       <RootNavigator />

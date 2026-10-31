@@ -217,3 +217,10 @@ describe('엔드포인트', () => {
     expect(header(calls[0], 'Authorization')).toBe('Bearer tok');
   });
 });
+
+
+it('concurrent first calls share one guest identity', async () => {
+  responses.push({status:201,body:{access_token:'one-guest'}});
+  expect(await Promise.all(Array.from({length:10},()=>ensureGuestSession()))).toEqual(Array(10).fill('one-guest'));
+  expect(calls).toHaveLength(1);
+});

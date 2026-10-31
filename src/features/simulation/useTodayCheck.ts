@@ -1,35 +1,26 @@
-/** 오늘의 질문 카드 스택 (시안 "오늘의 질문") — 카드 한 장 = 물건 하나 */
 import { useState } from 'react';
-
-import { answerToday } from '@/data';
-
+import { useQuery } from '@tanstack/react-query';
+import { loadTodayReflections, saveReflection, useToday, useAnswers, useItems, useQuestions, type ReflectionAnswer } from '@/data';
 import { useTodayQuestions } from './useTodayQuestions';
-
 export function useTodayCheck() {
   const live = useTodayQuestions();
-  // 화면을 연 순간의 목록으로 고정한다 (답할 때마다 목록이 줄어들어 순서가 흔들리지 않게)
-  const [queue] = useState(() => live.entries);
-  const [index, setIndex] = useState(0);
-  /** 이번에 답한 내용 (완료 화면 요약) */
-  const [answered, setAnswered] = useState<{ itemId: string; name: string; label: string }[]>([]);
-
-  return {
-    current: queue[index],
-    /** 뒤에 깔린 다음 카드 */
-    upcoming: queue[index + 1],
-    progress: { current: Math.min(index + 1, queue.length), total: queue.length, answered: index },
-    done: index >= queue.length,
-    /** 선택지 순서: 0 있었어요(→) · 1 딱히 없었어요(←) · 2 잘 모르겠어요(↑) */
-    answer: (optionIndex: number) => {
-      const entry = queue[index];
-      if (!entry) return;
-      const option = entry.question.options[optionIndex] ?? entry.question.options[entry.question.options.length - 1];
-      answerToday({ itemId: entry.item.id, questionId: entry.question.id, optionId: option.id });
-      setAnswered((a) => [...a, { itemId: entry.item.id, name: entry.item.name, label: option.label }]);
-      setIndex((i) => i + 1);
+  const today = useToday();
+  const answers = useAnswers(), items=useItems(), questions=useQuestions();
+  const [editing,setEditing] = useState<string|null>(null);
+  const answered=answers.filter(a=>a.date===today && !!a.value).flatMap(a=>{const item=items.find(i=>i.id===a.itemId);return item ? [{itemId:item.id,name:item.name,label:a.label ?? '',questionId:a.questionId}]:[];});
+  const editQuestion=questions.find(q=>q.id===editing && q.date===today);
+  const editItem=items.find(i=>i.id===editQuestion?.itemId);
+  const current=editQuestion && editItem ? {item:editItem,question:editQuestion,text:editQuestion.text} : live.entries[0];
+  const query = useQuery({queryKey:['daily-reflections',today], queryFn:async()=>{await loadTodayReflections();return true;}, staleTime:0, retry:false});
+  const loading = query.isPending;
+  const error = query.isError ? '질문을 불러오지 못했어요. 다시 시도해 주세요.' : null;
+  const load = () => {void query.refetch();};
+  return { ...live, loading, error, retry:load, answered, edit:setEditing,
+    current, done: !loading && live.entries.length === 0,
+    answer: (value: ReflectionAnswer,label:string) => {
+      const entry = current; if (!entry) return;
+      saveReflection(entry.question.id,value,label);
+      setEditing(null);
     },
-    answered,
-    /** 결과가 나온 물건 (체크를 끝낸 뒤 안내) */
-    resultsReady: live.awaitingDecision,
   };
 }

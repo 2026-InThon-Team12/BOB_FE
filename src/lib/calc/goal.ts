@@ -1,7 +1,7 @@
 /** 기능 4: 목표 비교 */
 import type { Policy } from '@/config/policy';
 import type { Goal, ImpulseEvent, Item, MonthlyBudget } from '@/types';
-import { addDays, dateKeyOf, diffDays } from '@/lib/date';
+import { addDays, dateKeyOf, diffDays, daysInMonth } from '@/lib/date';
 
 /** 일평균 저축액. 직접 입력값이 있으면 우선, 없으면 가계부 월 저축액 ÷ daysPerMonth */
 export function dailySaving(params: {
@@ -9,10 +9,10 @@ export function dailySaving(params: {
   override: number | null;
   policy: Pick<Policy, 'dailySaving'>;
 }): number | null {
-  const { budget, override, policy } = params;
+  const { budget, override } = params;
   if (override !== null && override > 0) return override;
   if (!budget || budget.saving <= 0) return null;
-  return budget.saving / policy.dailySaving.daysPerMonth;
+  return budget.saving / daysInMonth(budget.month);
 }
 
 /** "이거 사면 목표가 N일 늦게 와요" = max(1, round(지출액 ÷ 일평균 저축액)) (명세서 5장). 저축액을 모르면 null */
@@ -39,20 +39,8 @@ export function goalProgress(params: {
   policy: Pick<Policy, 'abandonCountsAsResisted'>;
 }): GoalProgress {
   const { goal, impulses, items, policy } = params;
-  const inGoalPeriod = (iso: string | undefined) =>
-    !!iso && iso >= goal.createdAt && (!goal.achievedAt || iso <= goal.achievedAt);
-
-  const fromImpulses = impulses
-    .filter((e) => e.goalId === goal.id && e.decision === 'resisted')
-    .reduce((s, e) => s + e.amount, 0);
-
-  const fromAbandoned = policy.abandonCountsAsResisted
-    ? items.filter((i) => i.status === 'abandoned' && inGoalPeriod(i.decidedAt)).reduce((s, i) => s + i.price, 0)
-    : 0;
-
-  // 참은 금액 = min(목표 금액, 옮겨 온 금액 + 누적) (명세서 5장 · 4.8-1)
-  const saved = Math.min(goal.price, (goal.carriedAmount ?? 0) + fromImpulses + fromAbandoned);
-  const ratio = goal.price > 0 ? saved / goal.price : 1;
+  const saved = goalCredits(goal, impulses, items, policy.abandonCountsAsResisted).reduce((sum, row) => sum + row.amount, 0);
+  const ratio = goal.price > 0 ? Math.min(1, saved / goal.price) : 1;
   return { saved, ratio, achieved: saved >= goal.price, remaining: Math.max(0, goal.price - saved) };
 }
 
@@ -81,16 +69,8 @@ export function goalStats(params: {
   policy: Pick<Policy, 'abandonCountsAsResisted'>;
 }): GoalStats {
   const { goal, impulses, items, today, policy } = params;
-  const inPeriod = (iso: string | undefined) =>
-    !!iso && iso >= goal.createdAt && (!goal.achievedAt || iso <= goal.achievedAt);
-  const events = [
-    ...impulses
-      .filter((e) => e.goalId === goal.id && e.decision === 'resisted')
-      .map((e) => ({ label: e.label, amount: e.amount })),
-    ...(policy.abandonCountsAsResisted
-      ? items.filter((i) => i.status === 'abandoned' && inPeriod(i.decidedAt)).map((i) => ({ label: i.name, amount: i.price }))
-      : []),
-  ];
+  const credits = goalCredits(goal,impulses,items,policy.abandonCountsAsResisted);
+  const events = credits.map(row=>({amount:row.amount,label: row.sourceId.startsWith('impulse:') ? impulses.find(e=>`impulse:${e.id}`===row.sourceId)?.label ?? goal.name : items.find(i=>`item:${i.id}`===row.sourceId)?.name ?? goal.name}));
   const byLabel = new Map<string, { count: number; amount: number }>();
   for (const e of events) {
     const cur = byLabel.get(e.label) ?? { count: 0, amount: 0 };
@@ -110,4 +90,22 @@ export function goalSetupPreview(params: { price: number; currentSaved: number; 
   const { price, currentSaved, transfer } = params;
   const carried = transfer ? Math.min(currentSaved, price) : 0;
   return { carried, remaining: Math.max(0, price - carried), ratio: price > 0 ? carried / price : 0 };
+}
+
+/** Allocations reference original events; removing an event cancels all its allocations. */
+export function goalCredits(goal: Goal, impulses: ImpulseEvent[], items: Item[], includeAbandoned = true): {sourceId: string; amount: number}[] {
+  const sources = new Map<string, number>([
+    ...impulses.filter(e => e.decision === 'resisted' && !e.cancelledAt).map(e => [`impulse:${e.id}`, e.amount] as const),
+    ...items.filter(i => i.status === 'abandoned').map(i => [`item:${i.id}`, i.price] as const),
+  ]);
+  const credits = (goal.allocations ?? (goal.carriedAmount ? [{sourceId: `legacy:${goal.id}`, amount: goal.carriedAmount}] : []))
+    .map(row => ({...row, amount: Math.min(row.amount, row.sourceId.startsWith('legacy:') ? row.amount : sources.get(row.sourceId) ?? 0)}));
+  if (!goal.closedAt) {
+    for (const e of impulses) if (e.goalId === goal.id && e.decision === 'resisted' && !e.cancelledAt && !credits.some(r => r.sourceId === `impulse:${e.id}`)) credits.push({sourceId: `impulse:${e.id}`, amount: e.amount});
+    if (includeAbandoned) for (const i of items) {
+      const belongs = i.savingGoalId ? i.savingGoalId === goal.id : i.decidedAt && i.decidedAt >= goal.createdAt && (!goal.achievedAt || i.decidedAt <= goal.achievedAt);
+      if (i.status === 'abandoned' && belongs && !credits.some(r => r.sourceId === `item:${i.id}`)) credits.push({sourceId: `item:${i.id}`, amount: i.price});
+    }
+  }
+  return credits.filter(r => r.amount > 0);
 }

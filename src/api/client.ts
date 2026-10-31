@@ -1,10 +1,4 @@
-/**
- * BE API 클라이언트 — 백엔드 README와 OpenAPI 계약을 기준으로 한다.
- *
- * - 응답은 unknown으로 받고 각 AI mapper에서 OpenAPI 형식을 검증한다.
- * - 데이터는 로컬 저장이 원본이므로(팀 결정) 지금 앱에서 실제로 쓰는 것은 AI 관련
- *   (itemDrafts, cartExtractions, productUrlDrafts)뿐이다. 나머지는 연결 준비만 해 둔다.
- */
+/** Backend metadata is synchronized; raw daily answers remain on this device until summary. */
 import { ApiError } from './errors';
 import { request, type ImageUpload } from './http';
 import { clearGuestToken, getGuestToken, setGuestToken } from './session';
@@ -25,23 +19,38 @@ export function extractToken(data: unknown): string {
   throw new ApiError('게스트 세션 응답에 토큰이 없어요.', 'invalid_response');
 }
 
-/** 저장된 게스트 토큰을 쓰고, 없으면 새로 발급받는다 */
-export async function ensureGuestSession(): Promise<string> {
-  const existing = await getGuestToken();
-  if (existing) return existing;
-  const token = extractToken(await request({ method: 'POST', path: '/guest-sessions' }));
-  await setGuestToken(token);
-  return token;
+let sessionFlight: Promise<string> | undefined;
+/** Concurrent first requests must all use the same guest identity. */
+export function ensureGuestSession(): Promise<string> {
+  if (sessionFlight) return sessionFlight;
+  sessionFlight = (async () => {
+    const existing = await getGuestToken();
+    if (existing) return existing;
+    const token = extractToken(await request({ method: 'POST', path: '/guest-sessions' }));
+    await setGuestToken(token);
+    return token;
+  })().finally(() => { sessionFlight = undefined; });
+  return sessionFlight;
 }
-
-/** 인증이 필요한 호출. 토큰이 만료돼 401이 오면 세션을 새로 받아 한 번만 다시 시도한다 */
+let refreshFlight: Promise<string> | undefined;
+async function refreshRejectedToken(rejected: string): Promise<string> {
+  if (refreshFlight) return refreshFlight;
+  refreshFlight = (async () => {
+    const current = await getGuestToken();
+    if (current && current !== rejected) return current;
+    await clearGuestToken();
+    return ensureGuestSession();
+  })().finally(() => { refreshFlight = undefined; });
+  return refreshFlight;
+}
+/** Retry once; an old 401 must never erase a newly refreshed session. */
 async function authed(opts: Omit<Parameters<typeof request>[0], 'token'>): Promise<unknown> {
+  const token = await ensureGuestSession();
   try {
-    return await request({ ...opts, token: await ensureGuestSession() });
+    return await request({ ...opts, token });
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) {
-      await clearGuestToken();
-      return request({ ...opts, token: await ensureGuestSession() });
+      return request({ ...opts, token: await refreshRejectedToken(token) });
     }
     throw e;
   }
@@ -83,12 +92,14 @@ export const bobApi = {
     get: (id: string) => authed({ method: 'GET', path: `/items/${seg(id)}` }),
     patch: (id: string, body: Body) => authed({ method: 'PATCH', path: `/items/${seg(id)}`, json: body }),
     /** 구매 결정 */
-    putDecision: (id: string, body: Body) =>
-      authed({ method: 'PUT', path: `/items/${seg(id)}/decision`, json: body }),
+    putDecision: (id: string, body: Body, idempotencyKey?: string) =>
+      authed({ method: 'PUT', path: `/items/${seg(id)}/decision`, json: body, ...(idempotencyKey ? {headers: {'Idempotency-Key': idempotencyKey}} : {}) }),
   },
 
   // ── 시뮬레이션 ────────────────────────────────────────
   simulations: {
+    localQuestion: (id: string, body: Body) => authed({method: 'POST', path: `/simulations/${seg(id)}/local-question`, json: body}),
+    summarize: (id: string, body: Body) => authed({method: 'POST', path: `/simulations/${seg(id)}/result-summary`, json: body}),
     /** @param date YYYY-MM-DD */
     putAnswers: (id: string, date: string, body: Body) =>
       authed({ method: 'PUT', path: `/simulations/${seg(id)}/answers/${seg(date)}`, json: body }),
@@ -97,6 +108,7 @@ export const bobApi = {
 
   // ── 구매 회고 ─────────────────────────────────────────
   purchases: {
+    localQuestion: (id: string, body: Body) => authed({method: 'POST', path: `/purchases/${seg(id)}/local-question`, json: body}),
     putReview: (id: string, body: Body) =>
       authed({ method: 'PUT', path: `/purchases/${seg(id)}/review`, json: body }),
   },

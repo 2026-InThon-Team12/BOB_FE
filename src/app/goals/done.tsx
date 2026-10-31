@@ -1,10 +1,11 @@
+import * as Linking from 'expo-linking';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Animated, Platform, View } from 'react-native';
 
 import { Confetti } from '@/components/feature';
-import { Button, Card, EmptyState, Gauge, Row, Screen, ScreenHeader, Stack, Text } from '@/components/ui';
-import { copy } from '@/constants/copy';
+import { Button, Card, EmptyState, Gauge, Row, Screen, ScreenHeader, Stack, Text, useToast } from '@/components/ui';
+import { copy, reflectionCopy } from '@/constants/copy';
 import { useAchievedGoal } from '@/features/goal/useGoalShelf';
 import { formatWon } from '@/lib/format';
 import { goBack } from '@/lib/navigation';
@@ -21,6 +22,7 @@ const RING_Y = 140;
 /** 목표 달성 (명세서 4.10) — 화면 진입 시 링 팝 + 폭죽 */
 export default function GoalDoneScreen() {
   const styles = useStyles();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const data = useAchievedGoal(id);
   const [pop] = useState(() => new Animated.Value(0.6));
@@ -48,7 +50,11 @@ export default function GoalDoneScreen() {
       edges={['top', 'bottom']}
       footer={
         <Stack gap={2}>
-          <Button label={copy.goalDone.buy} size="lg" fullWidth onPress={close} />
+          <Button label={copy.goalDone.buy} size="lg" fullWidth disabled={!goal.productUrl} onPress={async ()=>{
+            if (!goal.productUrl || !/^https:\/\//i.test(goal.productUrl)) return toast(reflectionCopy.urlInvalid);
+            try {await Linking.openURL(goal.productUrl);} catch {toast(reflectionCopy.urlFailed);}
+          }} />
+          {!goal.productUrl && <Text tone="secondary">{reflectionCopy.urlMissing}</Text>}
           <Button label={copy.goalDone.next} variant="ghost" fullWidth onPress={() => router.replace('/goals/new?mode=first')} />
         </Stack>
       }
