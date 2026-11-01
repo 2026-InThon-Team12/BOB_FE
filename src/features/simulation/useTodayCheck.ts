@@ -3,13 +3,13 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { loadTodayReflections, saveReflection, useToday, useAnswers, useItems, useQuestions, type ReflectionAnswer } from '@/data';
 import { useTodayQuestions } from './useTodayQuestions';
-import { isSwipeQuestion } from '@/lib/reflection';
+import { todayAnswers } from '@/lib/calc/todayAnswers';
 export function useTodayCheck() {
   const live = useTodayQuestions();
   const today = useToday();
   const answers = useAnswers(), items=useItems(), questions=useQuestions();
   const [editing,setEditing] = useState<string|null>(null);
-  const answered=answers.filter(a=>a.date===today && !!a.value).flatMap(a=>{const item=items.find(i=>i.id===a.itemId);const q=questions.find(q=>q.id===a.questionId);return item && q?.phase !== 'post' ? [{itemId:item.id,name:item.name,label:a.label ?? '',questionId:a.questionId,readOnly:!q || !isSwipeQuestion(q)}]:[];});
+  const answered = todayAnswers(items, questions, answers, today);
   const editQuestion=questions.find(q=>q.id===editing && q.date===today && q.phase !== 'post');
   const editItem=items.find(i=>i.id===editQuestion?.itemId);
   const selected=editQuestion && editItem ? {item:editItem,question:editQuestion,text:editQuestion.text} : live.entries[0];
@@ -20,7 +20,7 @@ export function useTodayCheck() {
   const error = query.isError ? '질문을 불러오지 못했어요. 다시 시도해 주세요.' : null;
   const load = () => {void query.refetch();};
   return { ...live, loading, error, retry:load, answered, edit:setEditing,
-    current, done: !loading && live.entries.length === 0,
+    current, editing: !!editQuestion, cancelEdit: () => setEditing(null), done: !loading && live.entries.length === 0,
     answer: async (value: ReflectionAnswer,label:string) => {
       const entry = current; if (!entry) return;
       setSavingEntry(entry);
