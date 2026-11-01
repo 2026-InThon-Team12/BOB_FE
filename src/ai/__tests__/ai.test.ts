@@ -48,6 +48,20 @@ describe('withFallback', () => {
 });
 
 describe('real mappers', () => {
+  it('keeps direct-vision fallback categories unset for the existing text classification flow', () => {
+    const analysis = mapCartScreenshot({
+      items: [{name:'키보드',price:30000,category:'OTHER',category_source:'FALLBACK',
+        image_crop:{mime_type:'image/jpeg',base64:'/9j/2Q=='}}],
+      review_items: [{name:'필름',price:null,category:'OTHER',category_source:'FALLBACK',review_fields:['selection','price']}],
+      analysis_method:'vision',extraction_strategy:'direct_vision',
+    });
+    expect(analysis.items[0]).toMatchObject({name:'키보드',price:30000,imageUri:'data:image/jpeg;base64,/9j/2Q=='});
+    expect(analysis.items[0].category).toBeUndefined();
+    expect(analysis.items[0].categoryConfidence).toBeUndefined();
+    expect(analysis.items[1]).toMatchObject({selectionUncertain:true,reviewFields:['selection','price']});
+    expect(mapCartScreenshot({items:[{name:'기타 물품',category:'OTHER',category_source:'AI'}],analysis_method:'text'}).items[0].category).toBe('etc');
+  });
+
   it('카테고리는 API enum·영문 키·한글 라벨을 받는다', () => {
     expect(toCategory('DIGITAL')).toBe('digital');
     expect(toCategory('DAILY_LIVING')).toBe('daily');
