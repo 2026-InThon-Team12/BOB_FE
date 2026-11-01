@@ -1,9 +1,10 @@
 /** 홈 (명세서 4.1 Main): 오늘 할 일(저녁 질문 · 결과 도착 · 구매 후 점검)과 목표 진행 */
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 
 import { policy } from '@/config/policy';
 import { CATEGORY_LABELS } from '@/constants/categories';
-import { useItems, useToday } from '@/data';
+import { syncRemoteItems, useHydrated, useItems, useSettings, useToday } from '@/data';
 import { derivePhase, simulationDayNumber } from '@/lib/calc';
 import type { Item } from '@/types';
 
@@ -22,6 +23,11 @@ export type SimRow = {
 export function useHome() {
   const items = useItems();
   const today = useToday();
+  const {clockOffsetDays} = useSettings();
+  const hydrated = useHydrated();
+  useFocusEffect(useCallback(() => {
+    if (hydrated) void syncRemoteItems().catch(() => {});
+  }, [hydrated]));
   const questions = useTodayQuestions();
   const goal = useGoalOverview();
 
@@ -49,6 +55,7 @@ export function useHome() {
   }, [items, today]);
 
   return {
+    today, clockOffsetDays,
     /** 오늘 답할 품목 수 (0이면 오늘 답변 완료 또는 시뮬레이션 없음) */
     todayCount: questions.dueCount,
     /** 시뮬레이션 중인 물건이 있지만 오늘 질문은 다 답함 */

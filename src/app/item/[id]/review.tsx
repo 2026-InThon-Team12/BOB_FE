@@ -41,12 +41,14 @@ export default function PostCheckScreen() {
           <Text tone="secondary">{copy.review.pick}</Text>
           {view.buckets.map(bucket=><Button key={bucket.id} label={copy.review.buckets[bucket.id].label} variant="secondary" disabled={review.busy} onPress={()=>{void review.submit(bucket.id);}}/>)}
           {review.busy && <Text>{copy.review.saving}</Text>}
-          {review.error && <Text tone="warning">{review.error}</Text>}
         </Stack></Card>}
+      {review.error && <Text tone="warning">{review.error}</Text>}
       {item.purchase?.reviewStart && <Text tone="secondary">{reflectionCopy.window(item.purchase.reviewStart,item.purchase.reviewEnd)}</Text>}
       {review.saved && (
         <>
           <Text variant="label">{copy.review.done}</Text>
+          {item.review?.syncState === 'preview' && <Text tone="warning">{reflectionCopy.reviewPreview}</Text>}
+          {item.review?.syncState === 'synced' && <Text tone="secondary">{reflectionCopy.reviewSynced}</Text>}
           <Text>{view.bucket ? copy.review.buckets[view.bucket.id]?.label : ''}</Text>
           {view.comparison && view.bucket && (
             <Card>
@@ -56,7 +58,7 @@ export default function PostCheckScreen() {
                 </Text>
                 <BarRow
                   label={copy.review.predicted}
-                  value={copy.review.daysOf(view.window, copy.report.days(view.predictedDays))}
+                  value={copy.review.daysOf(view.predictionWindowDays, copy.report.days(view.predictedDays))}
                   ratio={view.predictedRate}
                   tone="predicted"
                   strong
@@ -68,7 +70,7 @@ export default function PostCheckScreen() {
                   strong
                 />
                 <Text variant="bodyStrong" weight="700">
-                  {view.comparison.verdict.kind === 'muchLess'
+                  {!view.comparison.verdict ? reflectionCopy.reviewDifferentWindows : view.comparison.verdict.kind === 'muchLess'
                     ? copy.review.verdict.muchLess(view.comparison.verdict.fraction)
                     : copy.review.verdict[view.comparison.verdict.kind]}
                 </Text>

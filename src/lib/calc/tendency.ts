@@ -19,6 +19,7 @@ export type PredictionComparison = {
   /** 점검에서 답한 사용 일수 (구간 대표값) */
   actualDays: number;
   predictionWindowDays: number;
+  actualWindowDays: number;
   comparable: boolean;
 };
 
@@ -35,7 +36,16 @@ export function predictedVsActual(params: {
   policy: Pick<Policy, 'reviewAfterDays'>;
 }): PredictionComparison | null {
   const { item, policy } = params;
-  if (!item.review || !item.purchase || dateKeyOf(item.purchase.boughtAt) < simulationEndDay(item)) return null;
+  if (!item.review || !item.purchase) return null;
+  const saved = item.review.comparison;
+  if (saved) {
+    if (saved.expectedDays === null || (saved.reason && saved.reason !== 'DIFFERENT_OBSERVATION_WINDOWS')) return null;
+    const predictedRate = saved.predictionWindowDays ? saved.expectedDays / saved.predictionWindowDays : 0;
+    const actualRate = item.review.usedDays / saved.actualWindowDays;
+    return {predictedRate,actualRate,ratio:safeRatio(predictedRate,actualRate),predictedDays:saved.expectedDays,
+      actualDays:item.review.usedDays,predictionWindowDays:saved.predictionWindowDays,actualWindowDays:saved.actualWindowDays,comparable:saved.eligible};
+  }
+  if (dateKeyOf(item.purchase.boughtAt) < simulationEndDay(item)) return null;
   const dates = simulationDayKeys(item);
   const questions = params.questions.filter(q=>q.itemId===item.id && q.phase==='pre' && q.date && dates.includes(q.date));
   const counts = item.summary?.reflectionCounts ?? (questions.some(isSwipeQuestion) ? reflectionCounts(questions,params.answers) : undefined);
@@ -50,6 +60,7 @@ export function predictedVsActual(params: {
     predictedDays: counts ? counts.YES : predictedRate * policy.reviewAfterDays,
     actualDays: item.review.usedDays,
     predictionWindowDays,
+    actualWindowDays: policy.reviewAfterDays,
     comparable: predictionWindowDays === policy.reviewAfterDays,
   };
 }
@@ -113,10 +124,10 @@ export function categoryReviewUsage(params: {
     group.samples++;
     group.predictedDays = cmp && group.predictedDays !== null ? group.predictedDays + cmp.predictedDays : null;
     group.actualDays += item.review.usedDays;
-    group.minDays += bucket?.minDays ?? item.review.usedDays;
-    group.maxDays += bucket?.maxDays ?? item.review.usedDays;
+    group.minDays += item.review.minDays ?? bucket?.minDays ?? item.review.usedDays;
+    group.maxDays += item.review.maxDays ?? bucket?.maxDays ?? item.review.usedDays;
     group.predictionWindowDays += cmp?.predictionWindowDays ?? 0;
-    group.actualWindowDays += params.policy.reviewAfterDays;
+    group.actualWindowDays += item.review.comparison?.actualWindowDays ?? params.policy.reviewAfterDays;
     group.comparable = group.comparable && !!cmp?.comparable;
     groups.set(item.category,group);
   }

@@ -12,7 +12,7 @@ import { SWIPE_ANSWER_SPEC, swipePreCatalog } from '@/constants/swipeQuestionCat
 import { QuestionSchema, type Item, type Question } from '@/types';
 
 jest.mock('@/api',()=>({bobApi:{simulations:{localQuestion:jest.fn(),summarize:jest.fn()},purchases:{localQuestion:jest.fn()}}}));
-jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
+jest.mock('@/config/env',()=>({env:{aiMode:'real',demo:true}}));
 const input = {name:'요가매트',price:20000,category:'hobby' as const,reasons:['need' as const],source:'manual' as const};
 beforeEach(()=>{resetAllData();jest.resetAllMocks();});
 function setup(): Item {

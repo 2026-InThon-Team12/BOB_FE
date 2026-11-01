@@ -31,7 +31,7 @@ export function useDiscountTrap(batchId: string | undefined, registrationKey?: s
     () =>
       batchId
         ? items
-            .filter((i) => i.batchId === batchId && i.status === 'simulating')
+            .filter((i) => i.batchId === batchId && i.registrationState === 'pending' && !i.remoteId)
             // 같은 묶음은 등록 시각이 같아서 id(생성 순서)로 정렬
             .sort((a, b) => a.id.localeCompare(b.id))
             .map((i) => ({

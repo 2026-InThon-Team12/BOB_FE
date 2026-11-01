@@ -11,12 +11,14 @@ import { GoalSchema, ImpulseEventSchema, ItemSchema, ExpenseSchema } from '@/typ
 import { newFunding } from '@/lib/calc/funding';
 import { toDateKey } from '@/lib/date';
 
-export const CURRENT_VERSION = 4;
+export const CURRENT_VERSION = 5;
 
 type Migration = (state: Record<string, unknown>) => Record<string, unknown>;
 
 /** key: 이 버전에서 다음 버전으로 올리는 함수 */
 const MIGRATIONS: Record<number, Migration> = {
+  // Server review evidence and explicit developer previews are optional additions.
+  4: (s) => s,
   3: (s) => {
     const today = toDateKey(new Date());
     const expenses = Object.values((s.expenses ?? {}) as Record<string, unknown>)

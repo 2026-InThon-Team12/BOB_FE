@@ -18,6 +18,7 @@ import {
 } from '@/data';
 import { getState } from '@/data/store';
 import type { ConfirmedItemInput } from '@/types';
+jest.mock('@/config/env',()=>({env:{aiMode:'mock',demo:true}}));
 
 const input = (over: Partial<ConfirmedItemInput> = {}): ConfirmedItemInput => ({
   name: '니트 가디건',

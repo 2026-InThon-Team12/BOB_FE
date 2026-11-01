@@ -29,7 +29,7 @@ export { getNow, getNowIso, getThisMonth, getToday, useThisMonth, useToday } fro
 export { answerToday } from './actions/answers';
 export { refreshGoalAchievements, createGoal, deleteGoal, markGoalAchieved, setActiveGoal, updateGoal } from './actions/goals';
 export { addItems, decideItem, removeItem, submitReview, updateItem, type ItemPatch } from './actions/items';
-export { registerItemsRemote, registerAfterReasons, completeDiscountRegistration } from './actions/remoteItems';
+export { registerItemsRemote, registerAfterReasons, completeDiscountRegistration, syncRemoteItems } from './actions/remoteItems';
 export {
   completeOnboarding,
   claimHelp,

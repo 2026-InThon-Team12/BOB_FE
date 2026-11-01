@@ -13,7 +13,7 @@ import { reflectionMetrics } from '@/data/actions/reflections';
 import { migrate } from '@/data/migrations';
 import { SWIPE_ANSWER_SPEC } from '@/constants/swipeQuestionCatalog';
 jest.mock('@/api',()=>({bobApi:{simulations:{localQuestion:jest.fn(),summarize:jest.fn()},purchases:{localQuestion:jest.fn(),putReview:jest.fn()},items:{putDecision:jest.fn()}}}));
-jest.mock('@/config/env',()=>({env:{aiMode:'real'}}));
+jest.mock('@/config/env',()=>({env:{aiMode:'real',demo:true}}));
 const input={name:'키보드',price:20000,category:'digital' as const,reasons:['need' as const],source:'manual' as const};
 const progress=(id:string)=>{const s=getState();return goalProgress({goal:s.goals[id],impulses:Object.values(s.impulses),items:Object.values(s.items),policy,budgets:s.budgets,expenses:Object.values(s.expenses),today:getToday()});};
 beforeEach(()=>{resetAllData();jest.resetAllMocks();});
@@ -33,12 +33,14 @@ it('a next goal preserves the achieved shelf entry and does not reuse its saving
   } finally {now.mockRestore();}
 });
 it.each([0, 1, 2, 8])('Bye at day %i keeps questions, makes no expense, and survives summary failure', async day => {
+  let actualNow = Date.now();
+  jest.spyOn(Date,'now').mockImplementation(()=>actualNow);
   const [item] = addItems([input]);
   applyRemoteItem(item.id, {id:'server', decision:null, purchase:null, simulation:{id:'simulation', duration_days:7, start_date:getToday(), end_date_exclusive:addDays(getToday(),7)}});
   (bobApi.simulations.localQuestion as jest.Mock).mockRejectedValue(new Error('offline'));
   await loadTodayReflections();
   const questions = {...getState().questions};
-  shiftClock(day);
+  actualNow += day * 86400000;
   (bobApi.simulations.summarize as jest.Mock).mockRejectedValue(new Error('unavailable'));
   (bobApi.items.putDecision as jest.Mock).mockResolvedValue(undefined);
   await Promise.all([decideItemRemote(item.id,'abandon'), decideItemRemote(item.id,'abandon')]);
@@ -119,7 +121,11 @@ it('daily AI questions are frozen locally, response bodies leave the device only
   await loadTodayReflections();
   expect(bobApi.purchases.localQuestion).not.toHaveBeenCalled();
   expect(hasNotificationWork([getState().items[i.id]],[],[],getToday())).toBe(true);
-  (bobApi.purchases.putReview as jest.Mock).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({});
+  (bobApi.purchases.putReview as jest.Mock).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({
+    id:'purchase',item_id:'server',purchased_on:addDays(getToday(),-14),review_start:addDays(getToday(),-14),review_end:addDays(getToday(),-1),
+    review:{used_days:null,frequency:'DAYS_4_7',min_days:4,max_days:7,estimated_days:5.5,submitted_on:getToday()},
+    expected_days_in_review_window:1,expected_usage_rate:1/3,prediction_window_days:3,comparison_eligible:false,comparison_reason:'DIFFERENT_OBSERVATION_WINDOWS',
+  });
   await expect(submitReviewRemote(i.id,'DAYS_4_7')).rejects.toThrow('offline');
   expect(getState().items[i.id].review).toBeUndefined();
   await Promise.all([submitReviewRemote(i.id,'DAYS_4_7'),submitReviewRemote(i.id,'DAYS_4_7')]);

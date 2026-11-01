@@ -73,6 +73,17 @@ export const PostPurchaseReviewSchema = z.object({
   /** 구간의 대표 일수 (계산용). 구간 정의가 바뀌어도 기록 당시 값을 유지한다 */
   usedDays: z.number().nonnegative(),
   at: IsoString,
+  syncState: z.enum(['local', 'synced', 'preview']).optional(),
+  minDays: z.number().nonnegative().optional(),
+  maxDays: z.number().nonnegative().optional(),
+  comparison: z.object({
+    expectedDays: z.number().nullable(),
+    predictedRate: z.number().nullable(),
+    predictionWindowDays: z.number().nonnegative(),
+    actualWindowDays: z.number().positive(),
+    eligible: z.boolean(),
+    reason: z.string().nullable(),
+  }).optional(),
 });
 export type PostPurchaseReview = z.infer<typeof PostPurchaseReviewSchema>;
 
@@ -82,6 +93,7 @@ export const ItemSchema = z.object({
   remoteId: Id.optional(),
   simulationId: Id.optional(),
   purchaseId: Id.optional(),
+  developmentPreview: z.boolean().optional(),
   summary: z.object({
     text: z.string(), method: z.string(), expectedDays: z.number().nullable(),
     coverage: z.number(), eligible: z.boolean(), reason: z.string().nullable(),

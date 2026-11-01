@@ -1,6 +1,7 @@
 /** Daily adapted questions/answers are device-owned; only summary submissions include transcripts. */
 import { z } from 'zod';
 import { bobApi } from '@/api';
+import { ApiError } from '@/api/errors';
 import { env } from '@/config/env';
 import { policy } from '@/config/policy';
 import { SHORT_QUESTION_VERSION } from '@/constants/swipeQuestionCatalog';
@@ -12,9 +13,11 @@ import { reviewDueDay, simulationEndDay } from '@/lib/calc/itemMachine';
 import { requestDigest } from '@/lib/requestDigest';
 import type { DailyAnswer, Item, Question } from '@/types';
 import { getState, update } from '../store';
-import { getToday, getNowIso } from '../clock';
+import { getToday, getNowIso, isTimePreview } from '../clock';
+import { DataError } from '../errors';
 import { decideItem } from './items';
 import { applyRemoteItem } from './remoteItems';
+import { applyRemotePurchase } from './remotePurchase';
 
 import { isSwipeQuestion, reflectionCounts, validReflectionAnswer, type AnswerSpec, type ReflectionAnswer } from '@/lib/reflection';
 export type { AnswerSpec, ReflectionAnswer } from '@/lib/reflection';
@@ -51,7 +54,7 @@ export async function loadTodayReflections(): Promise<void> {
     if (Object.values(getState().answers).some(a=>a.itemId===item.id && a.date===today && (getState().questions[a.questionId]?.phase ?? 'pre')===(post ? 'post':'pre'))) return;
     let question = fallbackQuestion(item, today);
     const remoteId = post ? item.purchaseId : item.simulationId;
-    if (remoteId && env.aiMode === 'real') {
+    if (remoteId && env.aiMode === 'real' && !isTimePreview() && !item.developmentPreview) {
       const recent_templates = Object.values(getState().questions).filter(q => q.itemId === item.id && q.phase === question.phase && q.date && q.date < today && q.templateCode)
         .map(q => ({date:q.date, template_code:q.templateCode})).sort((a,b) => a.date!.localeCompare(b.date!)).slice(-365);
       try {
@@ -120,7 +123,7 @@ export async function summarizeItem(itemId: string): Promise<void> {
     const m = reflectionMetrics(item);
     const fingerprint = requestDigest('swipe-days-v1:' + JSON.stringify(m.responses));
     const remote = !!item.simulationId && env.aiMode === 'real';
-    const preview = remote && getState().settings.clockOffsetDays !== 0;
+    const preview = isTimePreview() || !!item.developmentPreview;
     const syncState = preview ? 'preview' : remote ? 'pending' : 'local';
     if (item.summary?.fingerprint === fingerprint && (!m.counts || item.summary.reflectionCounts)
       && item.summary.syncState === (preview ? 'preview' : remote ? 'synced' : 'local')) return;
@@ -146,10 +149,12 @@ export async function decideItemRemote(itemId: string, action: 'buy'|'abandon'|'
     }
     item = getState().items[itemId];
     let response: unknown;
-    if (item.remoteId && env.aiMode === 'real') response = await bobApi.items.putDecision(item.remoteId,{decision: action === 'buy' ? 'BUY' : action === 'hold' ? 'HOLD' : 'GIVE_UP'},`decision-${requestDigest(`${item.remoteId}:${action}:${simulationEndDay(item)}`)}`);
+    const preview = isTimePreview() || !!item.developmentPreview;
+    if (item.remoteId && env.aiMode === 'real' && !preview) response = await bobApi.items.putDecision(item.remoteId,{decision: action === 'buy' ? 'BUY' : action === 'hold' ? 'HOLD' : 'GIVE_UP'},`decision-${requestDigest(`${item.remoteId}:${action}:${simulationEndDay(item)}`)}`);
     const result = decideItem(itemId,action);
     if (response) return applyRemoteItem(itemId,response);
-    return result;
+    if (preview) await update(s=>({items:{...s.items,[itemId]:{...s.items[itemId],developmentPreview:true}}}));
+    return preview ? getState().items[itemId] : result;
   });
 }
 export async function submitReviewRemote(itemId: string, bucket: string): Promise<void> {
@@ -159,8 +164,28 @@ export async function submitReviewRemote(itemId: string, bucket: string): Promis
     const due = item && reviewDueDay(item,policy);
     if (!option || !item || item.status !== 'bought' || !due || getToday() < due) throw new Error(reflectionCopy.answerInvalid);
     if (item.review) return;
-    if (item.purchaseId && env.aiMode === 'real') await bobApi.purchases.putReview(item.purchaseId,{frequency:option.id});
-    const review = {usageBucket:option.id,usedDays:option.usedDays,at:getNowIso()};
+    const preview = isTimePreview() || !!item.developmentPreview;
+    if (item.purchaseId && env.aiMode === 'real' && !preview) {
+      try {
+        await applyRemotePurchase(itemId, await bobApi.purchases.putReview(item.purchaseId,{frequency:option.id}));
+        return;
+      } catch (error) {
+        const body = error instanceof ApiError ? z.object({error:z.object({code:z.string()})}).safeParse(error.body) : null;
+        const code = body?.success ? body.data.error.code : null;
+        if (item.remoteId && (code === 'REVIEW_ALREADY_COMPLETED' || code === 'REVIEW_NOT_DUE')) {
+          const raw = await bobApi.items.get(item.remoteId);
+          const purchase = z.object({purchase:z.unknown()}).parse(raw).purchase;
+          if (z.object({review:z.unknown()}).parse(purchase).review) {
+            await applyRemotePurchase(itemId,purchase);
+            return;
+          }
+          applyRemoteItem(itemId,raw);
+          if (code === 'REVIEW_NOT_DUE') throw new DataError(reflectionCopy.reviewNotDue, 'invalid_transition');
+        }
+        throw error;
+      }
+    }
+    const review = {usageBucket:option.id,usedDays:option.usedDays,at:getNowIso(),syncState:preview ? 'preview' as const : 'local' as const};
     try { await update(s=>({items:{...s.items,[itemId]:{...s.items[itemId],review}}})); }
     catch (error) {
       await Promise.resolve(update(s=>({items:{...s.items,[itemId]:{...s.items[itemId],review:undefined}}}))).catch(()=>{});

@@ -1,16 +1,18 @@
 /** 리포트 탭 (기능 2·6, 시안 "리포트") */
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 
 import { policy } from '@/config/policy';
 import { CATEGORY_LABELS } from '@/constants/categories';
 import { REASON_SHORT_LABELS } from '@/constants/reasons';
-import { useAnswers, useExpenses, useImpulses, useItems, useQuestions, useThisMonth } from '@/data';
+import { syncRemoteItems, useAnswers, useExpenses, useImpulses, useItems, useQuestions, useThisMonth } from '@/data';
 import { monthlyOutsideSpending } from '@/lib/calc/outsideSpending';
 import { monthlySummary, reasonStats, tendencyBadge, VERDICT_RATIO } from '@/lib/calc';
 import { categoryReviewUsage } from '@/lib/calc/tendency';
 import { addMonths } from '@/lib/date';
 
 export function useReport() {
+  useFocusEffect(useCallback(() => { void syncRemoteItems().catch(() => {}); }, []));
   const thisMonth = useThisMonth();
   const [picked, setPicked] = useState<string | null>(null);
   const month = picked ?? thisMonth;

@@ -99,6 +99,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
+      {env.demo && home.clockOffsetDays !== 0 && <Text tone="warning">{copy.dev.clockStatus(home.today, home.clockOffsetDays)}</Text>}
       <Card tone="brand">
         <Stack gap={3}>
           <Text variant="title">{updateCopy.impulseTitle}</Text>
