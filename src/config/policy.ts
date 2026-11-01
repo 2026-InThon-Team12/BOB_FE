@@ -13,6 +13,7 @@ export const policy = {
   hourlyRate: 10_700,
   startupMs: 1500,
   cartSelectionLimit: 10,
+  reflectionResultsPageSize: 5,
   /** #1 시뮬레이션 기간: 가격 구간별 일수 (오름차순, 마지막은 Infinity) */
   simulationBands: [
     { maxPrice: 30_000, days: 3 },

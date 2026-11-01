@@ -82,24 +82,28 @@ export default function DiscountTrapScreen() {
             </Text>
           </Row>
           <Row gap={2} wrap>
-            <CompactNumberInput
-              value={trap.minAmount}
-              onChangeValue={trap.setMinAmount}
-              accessibilityLabel={copy.trap.minLabel}
-              width={84}
-            />
-            <Text variant="label">{copy.trap.minSuffix}</Text>
-            <CompactNumberInput value={trap.value} onChangeValue={trap.setValue} accessibilityLabel={copy.trap.valueLabel} width={64} />
-            <SegmentedControl
-              accessibilityLabel={copy.trap.unitLabel}
-              value={trap.unit}
-              onChange={trap.setUnit}
-              options={[
-                { value: 'pct', label: copy.trap.unitPct },
-                { value: 'won', label: copy.trap.unitWon },
-              ]}
-            />
-            <Text variant="label">{copy.trap.discountSuffix}</Text>
+            <Row gap={2}>
+              <CompactNumberInput
+                value={trap.minAmount}
+                onChangeValue={trap.setMinAmount}
+                accessibilityLabel={copy.trap.minLabel}
+                width={84}
+              />
+              <Text variant="label">{copy.trap.minSuffix}</Text>
+            </Row>
+            <Row gap={2}>
+              <CompactNumberInput value={trap.value} onChangeValue={trap.setValue} accessibilityLabel={copy.trap.valueLabel} width={64} />
+              <SegmentedControl
+                accessibilityLabel={copy.trap.unitLabel}
+                value={trap.unit}
+                onChange={trap.setUnit}
+                options={[
+                  { value: 'pct', label: copy.trap.unitPct },
+                  { value: 'won', label: copy.trap.unitWon },
+                ]}
+              />
+              <Text variant="label">{copy.trap.discountSuffix}</Text>
+            </Row>
           </Row>
           <View style={styles.lineDivider} />
           {/* 무료배송 (명세서 4.11): 켜면 기준 금액, 끄면 배송비 */}

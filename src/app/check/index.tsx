@@ -3,8 +3,9 @@ import { router } from 'expo-router';
 import { View } from 'react-native';
 
 import { ReflectionAnswerForm } from '@/components/feature/ReflectionAnswerForm';
+import { ReflectionCompletion } from '@/components/feature/ReflectionCompletion';
 import { ReflectionSwipe, isThreeWay } from '@/components/feature/ReflectionSwipe';
-import { Button, Card, EmptyState, Row, Screen, ScreenHeader, SegmentedProgress, Stack, Text, Thumbnail } from '@/components/ui';
+import { Button, Card, Row, Screen, ScreenHeader, SegmentedProgress, Stack, Text, Thumbnail } from '@/components/ui';
 import { CATEGORY_LABELS } from '@/constants/categories';
 import { copy, reflectionCopy } from '@/constants/copy';
 import type { AnswerSpec } from '@/data';
@@ -37,7 +38,7 @@ export default function TodayCheckScreen() {
       />}
       edges={['top', 'bottom']}
     >
-      {total > 0 && <SegmentedProgress total={total} filled={check.answered.length} accessibilityLabel={reflectionCopy.todayTitle} />}
+      {total > 0 && !!entry && <SegmentedProgress total={total} filled={check.answered.length} accessibilityLabel={reflectionCopy.todayTitle} />}
       {check.loading ? (
         <Card><Text tone="secondary">{reflectionCopy.loadingQuestions}</Text></Card>
       ) : check.error ? (
@@ -61,11 +62,13 @@ export default function TodayCheckScreen() {
           </Stack>
         </Card></ReflectionSwipe>
       ) : (
-        <Card><EmptyState icon="check" title={reflectionCopy.allAnswered} /></Card>
+        <ReflectionCompletion answers={check.answered} onEdit={check.edit} />
       )}
-      {check.answered.map(a => <Button key={a.questionId} variant="ghost" label={reflectionCopy.edit(a.name, a.label ?? '')} onPress={() => check.edit(a.questionId)} />)}
-      {check.awaitingDecision.map(item => <Button key={item.id} label={reflectionCopy.result(item.name)} onPress={() => router.push({ pathname: '/item/[id]/result', params: { id: item.id } })} />)}
-      <Button label={reflectionCopy.home} variant="ghost" onPress={() => router.replace('/')} />
+      {check.editing && <Button label={reflectionCopy.cancelEdit} variant="ghost" onPress={check.cancelEdit} />}
+      {!entry && !check.loading && !check.error && <>
+        {check.awaitingDecision.map(item => <Button key={item.id} label={reflectionCopy.result(item.name)} onPress={() => router.push({ pathname: '/item/[id]/result', params: { id: item.id } })} />)}
+        <Button label={reflectionCopy.home} onPress={() => router.replace('/')} />
+      </>}
     </Screen>
   );
 }
