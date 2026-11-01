@@ -48,6 +48,28 @@ describe('withFallback', () => {
 });
 
 describe('real mappers', () => {
+  it('keeps each category from a direct-vision mixed cart', () => {
+    const analysis = mapCartScreenshot({
+      items: [
+        {name:'니트', category:'CLOTHING', category_source:'AI'},
+        {name:'우유', category:'FOOD', category_source:'AI'},
+        {name:'태블릿 보호필름', category:'DIGITAL', category_source:'AI'},
+      ],
+      analysis_method:'vision', extraction_strategy:'direct_vision',
+    });
+    expect(analysis.items.map(item => item.category)).toEqual(['clothing', 'food', 'digital']);
+    expect(analysis.items.every(item => item.categoryConfidence !== undefined)).toBe(true);
+  });
+
+  it('uses local classification when the server returns its manual OTHER fallback', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const ai = withFallback({...fallbackAi, classifyCategory: async () => mapCategory({
+      items:[{name:'니트',category:'OTHER',category_source:'FALLBACK'}], analysis_method:'manual',
+    })}, fallbackAi);
+    await expect(ai.classifyCategory({name:'니트'})).resolves.toMatchObject({category:'clothing'});
+    warn.mockRestore();
+  });
+
   it('keeps direct-vision fallback categories unset for the existing text classification flow', () => {
     const analysis = mapCartScreenshot({
       items: [{name:'키보드',price:30000,category:'OTHER',category_source:'FALLBACK',

@@ -86,6 +86,11 @@ export function mapCategory(data: unknown): CategoryGuess {
     ? analysis.data.items[0]
     : parse(CategoryDto, data, '카테고리 인식');
   if (!dto) throw new AiRequestError('카테고리 인식 결과가 비어 있어요.', 'invalid_response');
+  if ('category_source' in dto && dto.category_source === 'FALLBACK') {
+    // A failed server classification is not an AI decision for OTHER.
+    // Let withFallback try the local classifier instead of fixing every row to 기타.
+    throw new AiRequestError('카테고리 인식을 완료하지 못했어요.', 'invalid_response');
+  }
   const category = toCategory(dto.category);
   const confidence = 'confidence' in dto ? dto.confidence : undefined;
   return category ? { category, confidence: confidence ?? 0.5 } : { category: 'etc', confidence: 0 };
@@ -105,8 +110,8 @@ const toDraft = (dto: z.infer<typeof DraftDto>, source: ItemDraft['source'], sou
   name: dto.name.trim(),
   price: dto.price,
   imageUri: dto.image_url ?? dto.imageUrl ?? cropImageUri(dto.image_crop),
-  // Direct vision extracts only name/price/photo/selection. An unclassified
-  // fallback must remain empty so the review screen can request a text category.
+  // Keep failed/older unclassified drafts empty so the review screen can classify
+  // them. Successful direct-vision categories are already ready for display.
   category: dto.category_source === 'FALLBACK' && toCategory(dto.category) === 'etc' ? undefined : toCategory(dto.category),
   // OpenAPI에는 confidence가 없으므로, AI 추천 표시를 위한 중립값을 사용한다.
   categoryConfidence: dto.category_source === 'FALLBACK' ? undefined : toCategory(dto.category) ? (dto.confidence ?? 0.5) : undefined,
